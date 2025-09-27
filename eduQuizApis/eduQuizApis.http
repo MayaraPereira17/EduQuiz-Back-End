@@ -1,0 +1,6 @@
+@eduQuizApis_HostAddress = http://localhost:5034
+
+GET {{eduQuizApis_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

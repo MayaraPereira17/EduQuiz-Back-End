@@ -1,0 +1,9 @@
+{
+  "build": {
+    "dockerfilePath": "./Dockerfile"
+  },
+  "deploy": {
+    "startCommand": "dotnet eduQuizApis.dll",
+    "healthcheckPath": "/"
+  }
+}

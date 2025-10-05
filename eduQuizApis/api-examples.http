@@ -1,0 +1,92 @@
+### Exemplos de API - EduQuiz (Simplificado)
+### Apenas Cadastro e Autenticação de Usuários
+
+### 1. Testar conexão com banco de dados
+GET https://localhost:5034/api/test/database
+
+### 2. Criar usuário técnico (se não existir)
+POST https://localhost:5034/api/test/create-tecnico
+
+### 3. Login de usuário
+POST https://localhost:5034/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "tecnico@eduquiz.com",
+  "password": "admin123"
+}
+
+### 4. Cadastrar novo usuário - Aluno
+POST https://localhost:5034/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "lucas.ribeiro",
+  "email": "lucas.ribeiro@gmail.com",
+  "password": "senha123",
+  "firstName": "Lucas",
+  "lastName": "Ribeiro",
+  "cpf": "123.456.789-00",
+  "dataNascimento": "2000-01-01",
+  "role": "Aluno"
+}
+
+### 5. Cadastrar novo usuário - Professor
+POST https://localhost:5034/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "prof.maria",
+  "email": "maria@escola.com",
+  "password": "senha123",
+  "firstName": "Maria",
+  "lastName": "Silva",
+  "cpf": "987.654.321-00",
+  "dataNascimento": "1985-05-15",
+  "role": "Professor"
+}
+
+### 6. Cadastrar novo usuário - Técnico de Futebol
+POST https://localhost:5034/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "tecnico.joao",
+  "email": "joao@eduquiz.com",
+  "password": "senha123",
+  "firstName": "João",
+  "lastName": "Santos",
+  "cpf": "456.789.123-00",
+  "dataNascimento": "1980-03-20",
+  "role": "TecnicoFutebol"
+}
+
+### 7. Listar todos os usuários (requer autenticação)
+GET https://localhost:5034/api/auth/users
+Authorization: Bearer SEU_TOKEN_AQUI
+
+### 8. Obter perfil do usuário logado (requer autenticação)
+GET https://localhost:5034/api/auth/profile
+Authorization: Bearer SEU_TOKEN_AQUI
+
+### 9. Atualizar perfil do usuário (requer autenticação)
+PUT https://localhost:5034/api/auth/profile
+Content-Type: application/json
+Authorization: Bearer SEU_TOKEN_AQUI
+
+{
+  "firstName": "Lucas",
+  "lastName": "Ribeiro Atualizado",
+  "cpf": "123.456.789-00",
+  "dataNascimento": "2000-01-01"
+}
+
+### 10. Alterar senha (requer autenticação)
+PUT https://localhost:5034/api/auth/change-password
+Content-Type: application/json
+Authorization: Bearer SEU_TOKEN_AQUI
+
+{
+  "currentPassword": "senha123",
+  "newPassword": "novaSenha456"
+}

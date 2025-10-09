@@ -204,7 +204,7 @@ app.UseHttpsRedirection();
 // CORS
 if (app.Environment.IsDevelopment())
 {
-    app.UseCors("AllowAll");
+     app.UseCors("AllowAll");
 }
 else
 {

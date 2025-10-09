@@ -180,17 +180,24 @@ var app = builder.Build();
 app.MapHealthChecks("/health");
 
 // Swagger apenas em desenvolvimento
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "EduQuiz API v1");
-        c.RoutePrefix = string.Empty; // Para acessar o Swagger na raiz
-        c.DisplayRequestDuration();
-    });
-}
+//if (app.Environment.IsDevelopment())
+//{
+//    app.UseSwagger();
+//    app.UseSwaggerUI(c =>
+//    {
+//        c.SwaggerEndpoint("/swagger/v1/swagger.json", "EduQuiz API v1");
+//        c.RoutePrefix = string.Empty; // Para acessar o Swagger na raiz
+//        c.DisplayRequestDuration();
+//    });
+//}
 
+app.UseSwagger();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "EduQuiz API v1");
+    c.RoutePrefix = string.Empty; // Abre o Swagger direto na raiz
+    c.DisplayRequestDuration();
+});
 // HTTPS Redirection
 app.UseHttpsRedirection();
 
@@ -217,7 +224,7 @@ app.MapControllers();
 
 // Log de inicialização
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
-logger.LogInformation("EduQuiz API iniciada com Clean Architecture");
+logger.LogInformation("EduQuiz API ");
 logger.LogInformation("Environment: {Environment}", app.Environment.EnvironmentName);
 logger.LogInformation("Swagger disponível em: {SwaggerUrl}", app.Environment.IsDevelopment() ? "http://localhost:5034" : "Produção");
 

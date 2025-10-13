@@ -146,8 +146,36 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 
 // ===== CONFIGURAÇÃO CORS =====
+//builder.Services.AddCors(options =>
+//{
+//    options.AddPolicy("AllowAll", policy =>
+//    {
+//        policy.AllowAnyOrigin()
+//              .AllowAnyMethod()
+//              .AllowAnyHeader();
+//    });
+
+//    // Política mais restritiva para produção
+//    options.AddPolicy("Production", policy =>
+//    {
+//        policy.WithOrigins("https://yourdomain.com")
+//              .AllowAnyMethod()
+//              .AllowAnyHeader();
+//    });
+//});
+
+// ===== CONFIGURAÇÃO CORS =====
 builder.Services.AddCors(options =>
 {
+    // Política para desenvolvimento - permite frontend local
+    options.AddPolicy("Development", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173", "https://localhost:5173")
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials(); 
+    });
+
     options.AddPolicy("AllowAll", policy =>
     {
         policy.AllowAnyOrigin()
@@ -155,14 +183,15 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader();
     });
 
-    // Política mais restritiva para produção
     options.AddPolicy("Production", policy =>
     {
         policy.WithOrigins("https://yourdomain.com")
               .AllowAnyMethod()
-              .AllowAnyHeader();
+              .AllowAnyHeader()
+              .AllowCredentials();
     });
 });
+
 
 // ===== CONFIGURAÇÃO DE LOGGING =====
 builder.Logging.ClearProviders();

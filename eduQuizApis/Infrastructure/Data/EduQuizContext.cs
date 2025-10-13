@@ -13,9 +13,20 @@ namespace eduQuizApis.Infrastructure.Data
         }
 
         /// <summary>
-        /// DbSet para a entidade User
+        /// DbSets para as entidades do sistema
         /// </summary>
         public DbSet<User> Usuarios { get; set; }
+        public DbSet<Categorias> Categorias { get; set; }
+        public DbSet<Quizzes> Quizzes { get; set; }
+        public DbSet<Questoes> Questoes { get; set; }
+        public DbSet<OpcoesQuestao> OpcoesQuestao { get; set; }
+        public DbSet<TentativasQuiz> TentativasQuiz { get; set; }
+        public DbSet<Respostas> Respostas { get; set; }
+        public DbSet<RelatoriosPerformance> RelatoriosPerformance { get; set; }
+        public DbSet<ConfiguracoesSistema> ConfiguracoesSistema { get; set; }
+        public DbSet<RankingAlunos> RankingAlunos { get; set; }
+        public DbSet<Conquistas> Conquistas { get; set; }
+        public DbSet<ConquistasAlunos> ConquistasAlunos { get; set; }
 
         /// <summary>
         /// Configuração do modelo de dados

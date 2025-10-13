@@ -124,7 +124,20 @@ builder.Services.AddAuthentication(options =>
 });
 
 // Configurar autorização
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    // Política para alunos
+    options.AddPolicy("AlunoOnly", policy =>
+        policy.RequireClaim("Funcao", "Aluno"));
+    
+    // Política para professores
+    options.AddPolicy("ProfessorOnly", policy =>
+        policy.RequireClaim("Funcao", "Professor"));
+    
+    // Política para técnicos de futebol
+    options.AddPolicy("TecnicoFutebolOnly", policy =>
+        policy.RequireClaim("Funcao", "TecnicoFutebol"));
+});
 
 // ===== DEPENDENCY INJECTION - DOMAIN LAYER =====
 // Interfaces do domínio são registradas aqui, mas implementadas na Infrastructure
@@ -136,11 +149,15 @@ builder.Services.AddScoped<RegisterUseCase>();
 
 // Services
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IAlunoService, AlunoService>();
+builder.Services.AddScoped<IProfessorService, ProfessorService>();
 
 // ===== DEPENDENCY INJECTION - INFRASTRUCTURE LAYER =====
 // Repositories
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IAlunoRepository, AlunoRepository>();
+builder.Services.AddScoped<IProfessorRepository, ProfessorRepository>();
 
 // Services
 builder.Services.AddScoped<IJwtService, JwtService>();
@@ -148,6 +165,16 @@ builder.Services.AddScoped<IJwtService, JwtService>();
 // ===== CONFIGURAÇÃO CORS =====
 builder.Services.AddCors(options =>
 {
+    // Política para desenvolvimento - permite frontend local
+    options.AddPolicy("Development", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173", "https://localhost:5173")
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials(); // Permite cookies e headers de autenticação
+    });
+
+    // Política para permitir qualquer origem em desenvolvimento (fallback)
     options.AddPolicy("AllowAll", policy =>
     {
         policy.AllowAnyOrigin()
@@ -155,12 +182,17 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader();
     });
 
-    // Política mais restritiva para produção
+    // Política para produção - Railway
     options.AddPolicy("Production", policy =>
     {
-        policy.WithOrigins("https://yourdomain.com")
+        policy.WithOrigins(
+                "https://eduquiz-back-end-production.up.railway.app",
+                "http://localhost:5173",  // Para testes locais em produção
+                "https://localhost:5173"  // Para testes locais em produção
+              )
               .AllowAnyMethod()
-              .AllowAnyHeader();
+              .AllowAnyHeader()
+              .AllowCredentials();
     });
 });
 
@@ -197,7 +229,7 @@ app.UseHttpsRedirection();
 // CORS
 if (app.Environment.IsDevelopment())
 {
-    app.UseCors("AllowAll");
+    app.UseCors("Development"); // Usa a política específica para localhost:5173
 }
 else
 {

@@ -1,0 +1,321 @@
+### Exemplos de uso das APIs do Professor - EduQuiz
+
+# Variáveis
+@baseUrl = https://localhost:7030
+@token = SEU_TOKEN_JWT_AQUI
+
+### 1. Dashboard do Professor
+GET {{baseUrl}}/api/professor/dashboard
+Authorization: Bearer {{token}}
+
+### 2. Listar Meus Quizzes
+GET {{baseUrl}}/api/professor/quizzes
+Authorization: Bearer {{token}}
+
+### 3. Buscar Quizzes
+GET {{baseUrl}}/api/professor/quizzes?busca=equações
+Authorization: Bearer {{token}}
+
+### 4. Obter Quiz Específico
+GET {{baseUrl}}/api/professor/quizzes/1
+Authorization: Bearer {{token}}
+
+### 5. Criar Novo Quiz
+POST {{baseUrl}}/api/professor/quizzes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "titulo": "Equações do 2º Grau",
+  "descricao": "Quiz sobre resolução de equações quadráticas e suas aplicações",
+  "categoriaId": 1,
+  "dificuldade": "Médio",
+  "tempoLimite": 30,
+  "maxTentativas": 1,
+  "publico": true,
+  "questoes": [
+    {
+      "textoQuestao": "Qual é a fórmula de Bhaskara?",
+      "tipoQuestao": "MultiplaEscolha",
+      "pontos": 1,
+      "ordemIndice": 1,
+      "opcoes": [
+        {
+          "textoOpcao": "x = -b ± √(b²-4ac) / 2a",
+          "correta": true,
+          "ordemIndice": 1
+        },
+        {
+          "textoOpcao": "x = -b ± √(b²+4ac) / 2a",
+          "correta": false,
+          "ordemIndice": 2
+        },
+        {
+          "textoOpcao": "x = b ± √(b²-4ac) / 2a",
+          "correta": false,
+          "ordemIndice": 3
+        }
+      ]
+    },
+    {
+      "textoQuestao": "O que é o discriminante?",
+      "tipoQuestao": "MultiplaEscolha",
+      "pontos": 1,
+      "ordemIndice": 2,
+      "opcoes": [
+        {
+          "textoOpcao": "b² - 4ac",
+          "correta": true,
+          "ordemIndice": 1
+        },
+        {
+          "textoOpcao": "b² + 4ac",
+          "correta": false,
+          "ordemIndice": 2
+        },
+        {
+          "textoOpcao": "4ac - b²",
+          "correta": false,
+          "ordemIndice": 3
+        }
+      ]
+    }
+  ]
+}
+
+### 6. Atualizar Quiz
+PUT {{baseUrl}}/api/professor/quizzes/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "titulo": "Equações do 2º Grau - Atualizado",
+  "descricao": "Quiz atualizado sobre resolução de equações quadráticas",
+  "categoriaId": 1,
+  "dificuldade": "Médio",
+  "tempoLimite": 35,
+  "maxTentativas": 2,
+  "ativo": true,
+  "publico": true,
+  "questoes": [
+    {
+      "id": 1,
+      "textoQuestao": "Qual é a fórmula de Bhaskara?",
+      "tipoQuestao": "MultiplaEscolha",
+      "pontos": 1,
+      "ordemIndice": 1,
+      "opcoes": [
+        {
+          "id": 1,
+          "textoOpcao": "x = -b ± √(b²-4ac) / 2a",
+          "correta": true,
+          "ordemIndice": 1
+        },
+        {
+          "id": 2,
+          "textoOpcao": "x = -b ± √(b²+4ac) / 2a",
+          "correta": false,
+          "ordemIndice": 2
+        }
+      ]
+    },
+    {
+      "textoQuestao": "Qual é o valor de x na equação x² - 5x + 6 = 0?",
+      "tipoQuestao": "MultiplaEscolha",
+      "pontos": 1,
+      "ordemIndice": 2,
+      "opcoes": [
+        {
+          "textoOpcao": "x = 2 ou x = 3",
+          "correta": true,
+          "ordemIndice": 1
+        },
+        {
+          "textoOpcao": "x = 1 ou x = 6",
+          "correta": false,
+          "ordemIndice": 2
+        }
+      ]
+    }
+  ]
+}
+
+### 7. Publicar Quiz
+POST {{baseUrl}}/api/professor/quizzes/1/publicar
+Authorization: Bearer {{token}}
+
+### 8. Despublicar Quiz
+POST {{baseUrl}}/api/professor/quizzes/1/despublicar
+Authorization: Bearer {{token}}
+
+### 9. Deletar Quiz
+DELETE {{baseUrl}}/api/professor/quizzes/1
+Authorization: Bearer {{token}}
+
+### 10. Estatísticas do Quiz
+GET {{baseUrl}}/api/professor/quizzes/1/estatisticas
+Authorization: Bearer {{token}}
+
+### 11. Estatísticas das Questões
+GET {{baseUrl}}/api/professor/quizzes/1/estatisticas/questoes
+Authorization: Bearer {{token}}
+
+### 12. Tentativas do Quiz
+GET {{baseUrl}}/api/professor/quizzes/1/tentativas
+Authorization: Bearer {{token}}
+
+### 13. Perfil do Professor
+GET {{baseUrl}}/api/professor/perfil
+Authorization: Bearer {{token}}
+
+### 14. Atualizar Perfil
+PUT {{baseUrl}}/api/professor/perfil
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "João",
+  "sobrenome": "Silva",
+  "cpf": "123.456.789-00",
+  "dataNascimento": "1980-05-15T00:00:00Z",
+  "escola": "Escola Estadual XYZ",
+  "disciplina": "Matemática"
+}
+
+### 15. Listar Categorias
+GET {{baseUrl}}/api/professor/categorias
+Authorization: Bearer {{token}}
+
+### 16. Obter Categoria Específica
+GET {{baseUrl}}/api/professor/categorias/1
+Authorization: Bearer {{token}}
+
+### 17. Login para obter token (exemplo)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "professor@teste.com",
+  "password": "senha123"
+}
+
+### 18. Registrar novo professor (exemplo)
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "professor@teste.com",
+  "email": "professor@teste.com",
+  "password": "senha123",
+  "firstName": "João",
+  "lastName": "Silva",
+  "role": "Professor"
+}
+
+### Exemplo de Quiz Completo - Funções Lineares
+POST {{baseUrl}}/api/professor/quizzes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "titulo": "Funções Lineares",
+  "descricao": "Quiz sobre funções do primeiro grau, coeficientes angular e linear, e gráficos",
+  "categoriaId": 1,
+  "dificuldade": "Médio",
+  "tempoLimite": 25,
+  "maxTentativas": 1,
+  "publico": true,
+  "questoes": [
+    {
+      "textoQuestao": "Qual é o coeficiente angular da função f(x) = 2x + 3?",
+      "tipoQuestao": "MultiplaEscolha",
+      "pontos": 1,
+      "ordemIndice": 1,
+      "opcoes": [
+        {
+          "textoOpcao": "2",
+          "correta": true,
+          "ordemIndice": 1
+        },
+        {
+          "textoOpcao": "3",
+          "correta": false,
+          "ordemIndice": 2
+        },
+        {
+          "textoOpcao": "5",
+          "correta": false,
+          "ordemIndice": 3
+        },
+        {
+          "textoOpcao": "1",
+          "correta": false,
+          "ordemIndice": 4
+        }
+      ]
+    }
+  ]
+}
+
+### Exemplo de Quiz - Frações e Números Decimais
+POST {{baseUrl}}/api/professor/quizzes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "titulo": "Frações e Números Decimais",
+  "descricao": "Pratique operações com frações, conversão para decimais e resolução de problemas práticos",
+  "categoriaId": 1,
+  "dificuldade": "Fácil",
+  "tempoLimite": 32,
+  "maxTentativas": 1,
+  "publico": true,
+  "questoes": [
+    {
+      "textoQuestao": "Qual é o resultado de 1/2 + 1/4?",
+      "tipoQuestao": "MultiplaEscolha",
+      "pontos": 1,
+      "ordemIndice": 1,
+      "opcoes": [
+        {
+          "textoOpcao": "3/4",
+          "correta": true,
+          "ordemIndice": 1
+        },
+        {
+          "textoOpcao": "2/6",
+          "correta": false,
+          "ordemIndice": 2
+        },
+        {
+          "textoOpcao": "1/3",
+          "correta": false,
+          "ordemIndice": 3
+        }
+      ]
+    },
+    {
+      "textoQuestao": "Converta 0.5 para fração:",
+      "tipoQuestao": "MultiplaEscolha",
+      "pontos": 1,
+      "ordemIndice": 2,
+      "opcoes": [
+        {
+          "textoOpcao": "1/2",
+          "correta": true,
+          "ordemIndice": 1
+        },
+        {
+          "textoOpcao": "1/5",
+          "correta": false,
+          "ordemIndice": 2
+        },
+        {
+          "textoOpcao": "5/10",
+          "correta": true,
+          "ordemIndice": 3
+        }
+      ]
+    }
+  ]
+}

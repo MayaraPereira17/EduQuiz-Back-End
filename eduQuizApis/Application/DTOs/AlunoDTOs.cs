@@ -1,0 +1,185 @@
+using System.ComponentModel.DataAnnotations;
+
+namespace eduQuizApis.Application.DTOs
+{
+    // DTOs para Dashboard do Aluno
+    public class DashboardAlunoDTO
+    {
+        public int QuizzesCompletos { get; set; }
+        public decimal MediaGeral { get; set; }
+        public int PosicaoRanking { get; set; }
+        public int Sequencia { get; set; }
+        public int Pontos { get; set; }
+        public int TotalUsuarios { get; set; }
+        public List<QuizRecenteDTO> QuizzesRecentes { get; set; } = new List<QuizRecenteDTO>();
+    }
+
+    public class QuizRecenteDTO
+    {
+        public int QuizId { get; set; }
+        public string Titulo { get; set; } = string.Empty;
+        public string Categoria { get; set; } = string.Empty;
+        public decimal PercentualAcerto { get; set; }
+        public DateTime DataConclusao { get; set; }
+    }
+
+    // DTOs para Quiz
+    public class QuizDisponivelDTO
+    {
+        public int Id { get; set; }
+        public string Titulo { get; set; } = string.Empty;
+        public string Descricao { get; set; } = string.Empty;
+        public string Categoria { get; set; } = string.Empty;
+        public string Dificuldade { get; set; } = string.Empty;
+        public int? TempoLimite { get; set; }
+        public int TotalQuestoes { get; set; }
+        public int PontuacaoTotal { get; set; }
+        public bool Disponivel { get; set; }
+    }
+
+    public class IniciarQuizRequestDTO
+    {
+        [Required]
+        public int QuizId { get; set; }
+    }
+
+    public class IniciarQuizResponseDTO
+    {
+        public int TentativaId { get; set; }
+        public int QuizId { get; set; }
+        public string TituloQuiz { get; set; } = string.Empty;
+        public QuestaoAtualDTO QuestaoAtual { get; set; } = new QuestaoAtualDTO();
+        public ProgressoQuizDTO Progresso { get; set; } = new ProgressoQuizDTO();
+    }
+
+    public class QuestaoAtualDTO
+    {
+        public int Id { get; set; }
+        public string TextoQuestao { get; set; } = string.Empty;
+        public string TipoQuestao { get; set; } = string.Empty;
+        public List<OpcaoRespostaDTO> Opcoes { get; set; } = new List<OpcaoRespostaDTO>();
+        public int Pontos { get; set; }
+        public int OrdemIndice { get; set; }
+    }
+
+    public class OpcaoRespostaDTO
+    {
+        public int Id { get; set; }
+        public string TextoOpcao { get; set; } = string.Empty;
+        public int OrdemIndice { get; set; }
+    }
+
+    public class ProgressoQuizDTO
+    {
+        public int QuestaoAtual { get; set; }
+        public int TotalQuestoes { get; set; }
+        public decimal PercentualCompleto { get; set; }
+        public int PontuacaoAtual { get; set; }
+        public int TempoGasto { get; set; } // em segundos
+    }
+
+    public class ResponderQuestaoRequestDTO
+    {
+        [Required]
+        public int QuestaoId { get; set; }
+        public int? OpcaoSelecionadaId { get; set; }
+        public string? TextoResposta { get; set; }
+    }
+
+    public class ResponderQuestaoResponseDTO
+    {
+        public bool RespostaCorreta { get; set; }
+        public int PontosGanhos { get; set; }
+        public string RespostaCorretaTexto { get; set; } = string.Empty;
+        public string Feedback { get; set; } = string.Empty;
+        public QuestaoAtualDTO? ProximaQuestao { get; set; }
+        public bool QuizConcluido { get; set; }
+        public ResultadoQuizDTO? ResultadoFinal { get; set; }
+    }
+
+    public class ResultadoQuizDTO
+    {
+        public int TentativaId { get; set; }
+        public int PontuacaoFinal { get; set; }
+        public int PontuacaoMaxima { get; set; }
+        public decimal PercentualAcerto { get; set; }
+        public int TempoGasto { get; set; }
+        public int TotalQuestoes { get; set; }
+        public int RespostasCorretas { get; set; }
+        public int RespostasErradas { get; set; }
+        public DateTime DataConclusao { get; set; }
+    }
+
+    // DTOs para Ranking
+    public class RankingAlunoDTO
+    {
+        public int Posicao { get; set; }
+        public int UsuarioId { get; set; }
+        public string NomeCompleto { get; set; } = string.Empty;
+        public string Avatar { get; set; } = string.Empty;
+        public int Pontos { get; set; }
+        public int Quizzes { get; set; }
+        public decimal Media { get; set; }
+        public int Sequencia { get; set; }
+    }
+
+    public class RankingCompletoDTO
+    {
+        public List<RankingAlunoDTO> Alunos { get; set; } = new List<RankingAlunoDTO>();
+        public int TotalAlunos { get; set; }
+        public int PosicaoUsuarioLogado { get; set; }
+    }
+
+    // DTOs para Perfil
+    public class PerfilAlunoDTO
+    {
+        public int Id { get; set; }
+        public string Nome { get; set; } = string.Empty;
+        public string Sobrenome { get; set; } = string.Empty;
+        public string NomeCompleto { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Funcao { get; set; } = string.Empty;
+        public string CPF { get; set; } = string.Empty;
+        public DateTime? DataNascimento { get; set; }
+        public DateTime DataCriacao { get; set; }
+        public EstatisticasPerfilDTO Estatisticas { get; set; } = new EstatisticasPerfilDTO();
+    }
+
+    public class EstatisticasPerfilDTO
+    {
+        public int QuizzesCompletos { get; set; }
+        public decimal MediaGeral { get; set; }
+        public int Sequencia { get; set; }
+        public int Pontos { get; set; }
+    }
+
+    public class AtualizarPerfilRequestDTO
+    {
+        public string Nome { get; set; } = string.Empty;
+        public string Sobrenome { get; set; } = string.Empty;
+        public string CPF { get; set; } = string.Empty;
+        public DateTime? DataNascimento { get; set; }
+    }
+
+    public class DesempenhoQuizDTO
+    {
+        public int QuizId { get; set; }
+        public string TituloQuiz { get; set; } = string.Empty;
+        public string Categoria { get; set; } = string.Empty;
+        public decimal PercentualAcerto { get; set; }
+        public int Pontuacao { get; set; }
+        public int PontuacaoMaxima { get; set; }
+        public DateTime DataConclusao { get; set; }
+        public int TempoGasto { get; set; }
+    }
+
+    public class AtividadeRecenteDTO
+    {
+        public int Id { get; set; }
+        public string Tipo { get; set; } = string.Empty;
+        public string Descricao { get; set; } = string.Empty;
+        public DateTime Data { get; set; }
+        public string Icone { get; set; } = string.Empty;
+        public string Cor { get; set; } = string.Empty;
+    }
+}

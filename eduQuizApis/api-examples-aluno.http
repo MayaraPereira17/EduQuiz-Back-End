@@ -1,0 +1,95 @@
+### Exemplos de uso das APIs do Aluno - EduQuiz
+
+# Variáveis
+@baseUrl = https://localhost:7030
+@token = SEU_TOKEN_JWT_AQUI
+
+### 1. Dashboard do Aluno
+GET {{baseUrl}}/api/aluno/dashboard
+Authorization: Bearer {{token}}
+
+### 2. Listar Quizzes Disponíveis
+GET {{baseUrl}}/api/aluno/quizzes/disponiveis
+Authorization: Bearer {{token}}
+
+### 3. Iniciar um Quiz
+POST {{baseUrl}}/api/aluno/quizzes/iniciar
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "quizId": 1
+}
+
+### 4. Responder uma Questão
+POST {{baseUrl}}/api/aluno/tentativas/123/responder
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "questaoId": 1,
+  "opcaoSelecionadaId": 1,
+  "textoResposta": null
+}
+
+### 5. Verificar Progresso do Quiz
+GET {{baseUrl}}/api/aluno/tentativas/123/progresso
+Authorization: Bearer {{token}}
+
+### 6. Finalizar Quiz
+POST {{baseUrl}}/api/aluno/tentativas/123/finalizar
+Authorization: Bearer {{token}}
+
+### 7. Ranking Completo
+GET {{baseUrl}}/api/aluno/ranking
+Authorization: Bearer {{token}}
+
+### 8. Ranking com Busca
+GET {{baseUrl}}/api/aluno/ranking?busca=Lucas
+Authorization: Bearer {{token}}
+
+### 9. Perfil do Aluno
+GET {{baseUrl}}/api/aluno/perfil
+Authorization: Bearer {{token}}
+
+### 10. Atualizar Perfil
+PUT {{baseUrl}}/api/aluno/perfil
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "Lucas",
+  "sobrenome": "Ribeiro",
+  "cpf": "123.456.789-00",
+  "dataNascimento": "2000-01-15T00:00:00Z"
+}
+
+### 11. Desempenho do Aluno
+GET {{baseUrl}}/api/aluno/perfil/desempenho
+Authorization: Bearer {{token}}
+
+### 12. Atividades Recentes
+GET {{baseUrl}}/api/aluno/perfil/atividades-recentes
+Authorization: Bearer {{token}}
+
+### 13. Login para obter token (exemplo)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "aluno@teste.com",
+  "password": "senha123"
+}
+
+### 14. Registrar novo aluno (exemplo)
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "aluno@teste.com",
+  "email": "aluno@teste.com",
+  "password": "senha123",
+  "firstName": "Lucas",
+  "lastName": "Ribeiro",
+  "role": "Aluno"
+}

@@ -107,6 +107,7 @@ namespace eduQuizApis.Application.Services
                 user.Email = request.Email;
                 user.CPF = request.CPF;
                 user.DataNascimento = request.DataNascimento;
+                user.AvatarUrl = request.AvatarUrl;
                 user.UpdatedAt = DateTime.UtcNow;
 
                 // 4. Salvar alterações
@@ -224,6 +225,7 @@ namespace eduQuizApis.Application.Services
                 LastName = user.LastName,
                 CPF = user.CPF,
                 DataNascimento = user.DataNascimento,
+                AvatarUrl = user.AvatarUrl,
                 Role = user.Role,
                 IsActive = user.IsActive,
                 CreatedAt = user.CreatedAt

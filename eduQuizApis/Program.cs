@@ -228,6 +228,9 @@ if (app.Environment.IsDevelopment())
 // HTTPS Redirection
 app.UseHttpsRedirection();
 
+// Servir arquivos estáticos (para avatares)
+app.UseStaticFiles();
+
 // CORS
 if (app.Environment.IsDevelopment())
 {

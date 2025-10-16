@@ -281,6 +281,105 @@ namespace eduQuizApis.Presentation.Web.Controllers
         }
 
         /// <summary>
+        /// Upload de avatar/foto do usuário
+        /// </summary>
+        /// <param name="file">Arquivo de imagem do avatar</param>
+        /// <returns>URL do avatar salvo</returns>
+        /// <response code="200">Avatar enviado com sucesso</response>
+        /// <response code="400">Arquivo inválido</response>
+        /// <response code="401">Usuário não autenticado</response>
+        [HttpPost("avatar")]
+        [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<string>), 200)]
+        [ProducesResponseType(typeof(ApiResponse), 400)]
+        [ProducesResponseType(typeof(ApiResponse), 401)]
+        public async Task<ActionResult<ApiResponse<string>>> UploadAvatar(IFormFile file)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    _logger.LogWarning("Usuário não autenticado tentando fazer upload de avatar");
+                    return Unauthorized(ApiResponse<string>.ErrorResponse("Usuário não autenticado"));
+                }
+
+                _logger.LogInformation("Requisição de upload de avatar para usuário: {UserId}", userId);
+
+                // Validar arquivo
+                if (file == null || file.Length == 0)
+                {
+                    _logger.LogWarning("Arquivo de avatar não fornecido");
+                    return BadRequest(ApiResponse<string>.ErrorResponse("Arquivo não fornecido"));
+                }
+
+                // Validar tipo de arquivo
+                var allowedTypes = new[] { "image/jpeg", "image/jpg", "image/png", "image/gif" };
+                if (!allowedTypes.Contains(file.ContentType.ToLower()))
+                {
+                    _logger.LogWarning("Tipo de arquivo inválido: {ContentType}", file.ContentType);
+                    return BadRequest(ApiResponse<string>.ErrorResponse("Tipo de arquivo inválido. Apenas imagens (JPEG, PNG, GIF) são permitidas"));
+                }
+
+                // Validar tamanho (máximo 5MB)
+                if (file.Length > 5 * 1024 * 1024)
+                {
+                    _logger.LogWarning("Arquivo muito grande: {FileSize} bytes", file.Length);
+                    return BadRequest(ApiResponse<string>.ErrorResponse("Arquivo muito grande. Tamanho máximo permitido: 5MB"));
+                }
+
+                // Gerar nome único para o arquivo
+                var fileExtension = Path.GetExtension(file.FileName);
+                var fileName = $"{userId}_{DateTime.UtcNow:yyyyMMddHHmmss}{fileExtension}";
+                
+                // Diretório para salvar avatares (você pode configurar isso no appsettings)
+                var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "avatars");
+                
+                // Criar diretório se não existir
+                if (!Directory.Exists(uploadsPath))
+                {
+                    Directory.CreateDirectory(uploadsPath);
+                }
+
+                var filePath = Path.Combine(uploadsPath, fileName);
+
+                // Salvar arquivo
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await file.CopyToAsync(stream);
+                }
+
+                // Gerar URL do avatar (ajuste conforme sua configuração)
+                var avatarUrl = $"/avatars/{fileName}";
+
+                // Atualizar URL do avatar no perfil do usuário
+                var updateRequest = new UpdateProfileRequest
+                {
+                    FirstName = "", // Será ignorado se vazio
+                    LastName = "",  // Será ignorado se vazio
+                    Email = "",     // Será ignorado se vazio
+                    AvatarUrl = avatarUrl
+                };
+
+                var result = await _authService.UpdateUserProfileAsync(userId.Value, updateRequest);
+                
+                if (result == null)
+                {
+                    _logger.LogWarning("Falha ao atualizar avatar no perfil do usuário: {UserId}", userId);
+                    return BadRequest(ApiResponse<string>.ErrorResponse("Erro ao salvar avatar no perfil"));
+                }
+
+                _logger.LogInformation("Avatar enviado com sucesso para usuário: {UserId}, URL: {AvatarUrl}", userId, avatarUrl);
+                return Ok(ApiResponse<string>.SuccessResponse("Avatar enviado com sucesso", avatarUrl));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro interno durante upload de avatar");
+                return StatusCode(500, ApiResponse<string>.ErrorResponse("Erro interno do servidor. Tente novamente mais tarde."));
+            }
+        }
+
+        /// <summary>
         /// Obtém o ID do usuário atual a partir do token JWT
         /// </summary>
         /// <returns>ID do usuário ou null se não encontrado</returns>

@@ -63,6 +63,12 @@ namespace eduQuizApis.Domain.Entities
         public DateTime? DataNascimento { get; set; }
 
         /// <summary>
+        /// URL do avatar/foto do usuário (opcional)
+        /// </summary>
+        [MaxLength(500)]
+        public string? AvatarUrl { get; set; }
+
+        /// <summary>
         /// Função/Papel do usuário no sistema
         /// </summary>
         [Required]

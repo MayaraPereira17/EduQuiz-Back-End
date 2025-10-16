@@ -168,7 +168,7 @@ builder.Services.AddCors(options =>
     // Política para desenvolvimento - permite frontend local
     options.AddPolicy("Development", policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "https://localhost:5173")
+        policy.WithOrigins("http://localhost:5173", "https://localhost:5173", "http://localhost:5174", "https://localhost:5174")
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials(); // Permite cookies e headers de autenticação
@@ -188,7 +188,9 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(
                 "https://eduquiz-back-end-production.up.railway.app",
                 "http://localhost:5173",  // Para testes locais em produção
-                "https://localhost:5173"  // Para testes locais em produção
+                "https://localhost:5173",  // Para testes locais em produção
+                "http://localhost:5174",  // Para testes locais em produção
+                "https://localhost:5174"  // Para testes locais em produção
               )
               .AllowAnyMethod()
               .AllowAnyHeader()

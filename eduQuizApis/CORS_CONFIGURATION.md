@@ -9,11 +9,15 @@ A API EduQuiz foi configurada para permitir acesso do frontend em **desenvolvime
 **Desenvolvimento:**
 - `http://localhost:5173` ✅
 - `https://localhost:5173` ✅
+- `http://localhost:5174` ✅
+- `https://localhost:5174` ✅
 
 **Produção (Railway):**
 - `https://eduquiz-back-end-production.up.railway.app` ✅
 - `http://localhost:5173` ✅ (para testes locais)
 - `https://localhost:5173` ✅ (para testes locais)
+- `http://localhost:5174` ✅ (para testes locais)
+- `https://localhost:5174` ✅ (para testes locais)
 
 ### 🔧 Configuração Técnica
 
@@ -22,7 +26,7 @@ A API EduQuiz foi configurada para permitir acesso do frontend em **desenvolvime
 // Política para desenvolvimento - permite frontend local
 options.AddPolicy("Development", policy =>
 {
-    policy.WithOrigins("http://localhost:5173", "https://localhost:5173")
+    policy.WithOrigins("http://localhost:5173", "https://localhost:5173", "http://localhost:5174", "https://localhost:5174")
           .AllowAnyMethod()
           .AllowAnyHeader()
           .AllowCredentials(); // Permite cookies e headers de autenticação
@@ -37,7 +41,9 @@ options.AddPolicy("Production", policy =>
     policy.WithOrigins(
             "https://eduquiz-back-end-production.up.railway.app",
             "http://localhost:5173",  // Para testes locais em produção
-            "https://localhost:5173"  // Para testes locais em produção
+            "https://localhost:5173",  // Para testes locais em produção
+            "http://localhost:5174",  // Para testes locais em produção
+            "https://localhost:5174"  // Para testes locais em produção
           )
           .AllowAnyMethod()
           .AllowAnyHeader()
@@ -81,7 +87,7 @@ options.AddPolicy("Production", policy =>
 
 ### 🔒 Segurança
 
-- **Desenvolvimento**: Acesso liberado para `localhost:5173`
+- **Desenvolvimento**: Acesso liberado para `localhost:5173` e `localhost:5174`
 - **Produção**: Apenas domínios específicos serão permitidos
 
 ### 🚨 Troubleshooting
@@ -124,7 +130,7 @@ Para adicionar novos domínios:
 1. Edite o arquivo `Program.cs`
 2. Adicione a nova URL na política `Development`:
    ```csharp
-   policy.WithOrigins("http://localhost:5173", "https://localhost:5173", "https://novodominio.com")
+   policy.WithOrigins("http://localhost:5173", "https://localhost:5173", "http://localhost:5174", "https://localhost:5174", "https://novodominio.com")
    ```
 3. Reinicie a aplicação
 

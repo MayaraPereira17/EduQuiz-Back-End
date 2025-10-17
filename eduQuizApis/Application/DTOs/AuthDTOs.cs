@@ -83,15 +83,15 @@ namespace eduQuizApis.Application.DTOs
         public DateTime? DataNascimento { get; set; }
 
         /// <summary>
-        /// Função do usuário no sistema
-        /// </summary>
-        public string Role { get; set; } = "Aluno";
-
-        /// <summary>
         /// URL do avatar/foto do usuário (opcional)
         /// </summary>
         [MaxLength(500, ErrorMessage = "URL do avatar deve ter no máximo 500 caracteres")]
         public string? AvatarUrl { get; set; }
+
+        /// <summary>
+        /// Função do usuário no sistema
+        /// </summary>
+        public string Role { get; set; } = "Aluno";
     }
 
     /// <summary>

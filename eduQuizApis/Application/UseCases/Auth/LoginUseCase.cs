@@ -98,6 +98,7 @@ namespace eduQuizApis.Application.UseCases.Auth
                 LastName = user.LastName,
                 CPF = user.CPF,
                 DataNascimento = user.DataNascimento,
+                AvatarUrl = user.AvatarUrl,
                 Role = user.Role,
                 IsActive = user.IsActive,
                 CreatedAt = user.CreatedAt

@@ -94,20 +94,34 @@ namespace eduQuizApis.Application.Services
                     return null;
                 }
 
-                // 2. Verificar se email já existe (se mudou)
-                if (user.Email != request.Email && await _userRepository.EmailExistsAsync(request.Email, userId))
+                // 2. Verificar se email já existe (se mudou e não está vazio)
+                if (!string.IsNullOrEmpty(request.Email) && 
+                    user.Email != request.Email && 
+                    await _userRepository.EmailExistsAsync(request.Email, userId))
                 {
                     _logger.LogWarning("Email já existe para outro usuário: {Email}", request.Email);
                     return null;
                 }
 
-                // 3. Atualizar dados
-                user.FirstName = request.FirstName;
-                user.LastName = request.LastName;
-                user.Email = request.Email;
-                user.CPF = request.CPF;
-                user.DataNascimento = request.DataNascimento;
-                user.AvatarUrl = request.AvatarUrl;
+                // 3. Atualizar dados (apenas campos não vazios)
+                if (!string.IsNullOrEmpty(request.FirstName))
+                    user.FirstName = request.FirstName;
+                
+                if (!string.IsNullOrEmpty(request.LastName))
+                    user.LastName = request.LastName;
+                
+                if (!string.IsNullOrEmpty(request.Email))
+                    user.Email = request.Email;
+                
+                if (!string.IsNullOrEmpty(request.CPF))
+                    user.CPF = request.CPF;
+                
+                if (request.DataNascimento.HasValue)
+                    user.DataNascimento = request.DataNascimento;
+                
+                if (!string.IsNullOrEmpty(request.AvatarUrl))
+                    user.AvatarUrl = request.AvatarUrl;
+                
                 user.UpdatedAt = DateTime.UtcNow;
 
                 // 4. Salvar alterações

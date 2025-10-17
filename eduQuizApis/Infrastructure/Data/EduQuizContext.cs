@@ -50,6 +50,7 @@ namespace eduQuizApis.Infrastructure.Data
                 entity.Property(e => e.LastName).HasColumnName("Sobrenome");
                 entity.Property(e => e.CPF).HasColumnName("CPF");
                 entity.Property(e => e.DataNascimento).HasColumnName("DataNascimento");
+                entity.Property(e => e.AvatarUrl).HasColumnName("avatar_url");
                 
                 // Conversão de enum para string e vice-versa
                 entity.Property(e => e.Role)

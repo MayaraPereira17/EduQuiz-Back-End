@@ -335,22 +335,40 @@ namespace eduQuizApis.Presentation.Web.Controllers
                 // Diretório para salvar avatares (você pode configurar isso no appsettings)
                 var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "avatars");
                 
+                _logger.LogInformation("Diretório de upload: {UploadsPath}", uploadsPath);
+                
                 // Criar diretório se não existir
                 if (!Directory.Exists(uploadsPath))
                 {
                     Directory.CreateDirectory(uploadsPath);
+                    _logger.LogInformation("Diretório criado: {UploadsPath}", uploadsPath);
                 }
 
                 var filePath = Path.Combine(uploadsPath, fileName);
+                _logger.LogInformation("Caminho completo do arquivo: {FilePath}", filePath);
 
                 // Salvar arquivo
                 using (var stream = new FileStream(filePath, FileMode.Create))
                 {
                     await file.CopyToAsync(stream);
                 }
+                
+                _logger.LogInformation("Arquivo salvo com sucesso: {FilePath}", filePath);
+                
+                // Verificar se arquivo existe após salvar
+                if (System.IO.File.Exists(filePath))
+                {
+                    var fileInfo = new FileInfo(filePath);
+                    _logger.LogInformation("Arquivo confirmado - Tamanho: {FileSize} bytes", fileInfo.Length);
+                }
+                else
+                {
+                    _logger.LogError("Arquivo NÃO foi salvo: {FilePath}", filePath);
+                }
 
                 // Gerar URL do avatar (ajuste conforme sua configuração)
                 var avatarUrl = $"/avatars/{fileName}";
+                _logger.LogInformation("URL do avatar gerada: {AvatarUrl}", avatarUrl);
 
                 // Atualizar URL do avatar no perfil do usuário
                 var updateRequest = new UpdateProfileRequest

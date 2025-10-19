@@ -551,7 +551,7 @@ namespace eduQuizApis.Application.Services
                     Titulo = q.Titulo,
                     Categoria = q.Categoria.Nome,
                     TotalTentativas = _context.TentativasQuiz.Count(t => t.QuizId == q.Id && t.Concluida),
-                    MediaPontuacao = 0 // Será calculado separadamente se necessário,
+                    MediaPontuacao = 0, // Será calculado separadamente se necessário
                     DataCriacao = q.DataCriacao,
                     Publicado = q.Publico
                 })

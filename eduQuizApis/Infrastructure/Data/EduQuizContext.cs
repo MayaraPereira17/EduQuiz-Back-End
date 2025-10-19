@@ -124,9 +124,7 @@ namespace eduQuizApis.Infrastructure.Data
                 entity.Property(e => e.TipoQuestao)
                     .HasColumnName("TipoQuestao")
                     .IsRequired()
-                    .HasConversion(
-                        v => v.ToString(),
-                        v => (Domain.Enums.TipoQuestao)Enum.Parse(typeof(Domain.Enums.TipoQuestao), v));
+                    .HasMaxLength(50);
                 entity.Property(e => e.Pontos).HasColumnName("Pontos").HasDefaultValue(1);
                 entity.Property(e => e.OrdemIndice).HasColumnName("OrdemIndice").IsRequired();
                 entity.Property(e => e.Ativo).HasColumnName("Ativo").HasDefaultValue(true);

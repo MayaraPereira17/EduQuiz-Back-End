@@ -197,15 +197,27 @@ namespace eduQuizApis.Application.Services
 
                 // Validar categoria
                 Console.WriteLine($"Validando categoria {request.CategoriaId}");
-                var categoria = await _context.Categorias
-                    .FirstOrDefaultAsync(c => c.Id == request.CategoriaId && c.Ativo);
-                if (categoria == null)
+                
+                // Primeiro, verificar se a categoria existe (mesmo se inativa)
+                var categoriaExiste = await _context.Categorias
+                    .FirstOrDefaultAsync(c => c.Id == request.CategoriaId);
+                
+                if (categoriaExiste == null)
                 {
-                    Console.WriteLine($"Categoria {request.CategoriaId} não encontrada");
-                    throw new ArgumentException("Categoria não encontrada");
+                    Console.WriteLine($"Categoria {request.CategoriaId} não existe no banco");
+                    throw new ArgumentException($"Categoria {request.CategoriaId} não encontrada");
+                }
+                
+                Console.WriteLine($"Categoria encontrada: {categoriaExiste.Nome}, Ativa: {categoriaExiste.Ativo}");
+                
+                // Verificar se está ativa
+                if (!categoriaExiste.Ativo)
+                {
+                    Console.WriteLine($"Categoria {request.CategoriaId} existe mas está inativa");
+                    throw new ArgumentException("Categoria não está ativa");
                 }
 
-                Console.WriteLine($"Categoria validada: {categoria.Nome}");
+                Console.WriteLine($"Categoria validada: {categoriaExiste.Nome}");
 
                 // Criar quiz
                 Console.WriteLine("Criando quiz...");

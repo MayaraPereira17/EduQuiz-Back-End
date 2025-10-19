@@ -74,7 +74,7 @@ namespace eduQuizApis.Application.DTOs
         public int CategoriaId { get; set; }
         
         [Required]
-        public string Dificuldade { get; set; } = string.Empty;
+        public string Dificuldade { get; set; } = "Media"; // Fácil, Média, Difícil
         
         public int? TempoLimite { get; set; }
         

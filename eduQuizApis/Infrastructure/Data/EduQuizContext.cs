@@ -87,10 +87,13 @@ namespace eduQuizApis.Infrastructure.Data
             modelBuilder.Entity<Quizzes>(entity =>
             {
                 entity.ToTable("Quizzes");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("Id").ValueGeneratedOnAdd();
                 entity.Property(e => e.Titulo).HasColumnName("Titulo").IsRequired().HasMaxLength(200);
                 entity.Property(e => e.Descricao).HasColumnName("Descricao");
                 entity.Property(e => e.CategoriaId).HasColumnName("CategoriaId").IsRequired();
                 entity.Property(e => e.CriadoPor).HasColumnName("CriadoPor").IsRequired();
+                entity.Property(e => e.Dificuldade).HasColumnName("Dificuldade").IsRequired().HasMaxLength(20).HasDefaultValue("Media");
                 entity.Property(e => e.TempoLimite).HasColumnName("TempoLimite");
                 entity.Property(e => e.MaxTentativas).HasColumnName("MaxTentativas").HasDefaultValue(1);
                 entity.Property(e => e.Ativo).HasColumnName("Ativo").HasDefaultValue(true);
@@ -114,9 +117,16 @@ namespace eduQuizApis.Infrastructure.Data
             modelBuilder.Entity<Questoes>(entity =>
             {
                 entity.ToTable("Questoes");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("Id").ValueGeneratedOnAdd();
                 entity.Property(e => e.QuizId).HasColumnName("QuizId").IsRequired();
                 entity.Property(e => e.TextoQuestao).HasColumnName("TextoQuestao").IsRequired();
-                entity.Property(e => e.TipoQuestao).HasColumnName("TipoQuestao").IsRequired().HasMaxLength(50);
+                entity.Property(e => e.TipoQuestao)
+                    .HasColumnName("TipoQuestao")
+                    .IsRequired()
+                    .HasConversion(
+                        v => v.ToString(),
+                        v => (Domain.Enums.TipoQuestao)Enum.Parse(typeof(Domain.Enums.TipoQuestao), v));
                 entity.Property(e => e.Pontos).HasColumnName("Pontos").HasDefaultValue(1);
                 entity.Property(e => e.OrdemIndice).HasColumnName("OrdemIndice").IsRequired();
                 entity.Property(e => e.Ativo).HasColumnName("Ativo").HasDefaultValue(true);
@@ -134,6 +144,8 @@ namespace eduQuizApis.Infrastructure.Data
             modelBuilder.Entity<OpcoesQuestao>(entity =>
             {
                 entity.ToTable("OpcoesQuestao");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("Id").ValueGeneratedOnAdd();
                 entity.Property(e => e.QuestaoId).HasColumnName("QuestaoId").IsRequired();
                 entity.Property(e => e.TextoOpcao).HasColumnName("TextoOpcao").IsRequired();
                 entity.Property(e => e.Correta).HasColumnName("Correta").HasDefaultValue(false);

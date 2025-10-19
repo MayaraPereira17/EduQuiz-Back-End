@@ -20,6 +20,10 @@ namespace eduQuizApis.Domain.Entities
         [Required]
         public int CriadoPor { get; set; }
         
+        [Required]
+        [MaxLength(20)]
+        public string Dificuldade { get; set; } = "Media"; // Fácil, Média, Difícil
+        
         public int? TempoLimite { get; set; }
         
         public int MaxTentativas { get; set; } = 1;

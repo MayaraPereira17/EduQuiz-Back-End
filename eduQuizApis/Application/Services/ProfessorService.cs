@@ -180,6 +180,7 @@ namespace eduQuizApis.Application.Services
             try
             {
                 Console.WriteLine($"Iniciando criação de quiz para professor {professorId}");
+                Console.WriteLine($"Payload recebido - Título: {request.Titulo}, CategoriaId: {request.CategoriaId}, Dificuldade: {request.Dificuldade}");
                 
                 var professor = await _userRepository.GetByIdAsync(professorId);
                 if (professor == null || professor.Role.ToString() != "Professor")
@@ -210,6 +211,7 @@ namespace eduQuizApis.Application.Services
                     Descricao = request.Descricao,
                     CategoriaId = request.CategoriaId,
                     CriadoPor = professorId,
+                    Dificuldade = request.Dificuldade,
                     TempoLimite = request.TempoLimite,
                     MaxTentativas = request.MaxTentativas,
                     Ativo = true,

@@ -177,76 +177,112 @@ namespace eduQuizApis.Application.Services
 
         public async Task<CriarQuizResponseDTO> CriarQuizAsync(int professorId, CriarQuizRequestDTO request)
         {
-            var professor = await _userRepository.GetByIdAsync(professorId);
-            if (professor == null || professor.Role.ToString() != "Professor")
-                throw new ArgumentException("Professor não encontrado");
-
-            // Validar categoria
-            var categoria = await _context.Categorias
-                .FirstOrDefaultAsync(c => c.Id == request.CategoriaId && c.Ativo);
-            if (categoria == null)
-                throw new ArgumentException("Categoria não encontrada");
-
-            // Criar quiz
-            var quiz = new Quizzes
+            try
             {
-                Titulo = request.Titulo,
-                Descricao = request.Descricao,
-                CategoriaId = request.CategoriaId,
-                CriadoPor = professorId,
-                TempoLimite = request.TempoLimite,
-                MaxTentativas = request.MaxTentativas,
-                Ativo = true,
-                Publico = request.Publico,
-                DataCriacao = DateTime.UtcNow,
-                DataAtualizacao = DateTime.UtcNow
-            };
-
-            _context.Quizzes.Add(quiz);
-            await _context.SaveChangesAsync();
-
-            // Criar questões
-            foreach (var questaoRequest in request.Questoes)
-            {
-                var questao = new Questoes
+                Console.WriteLine($"Iniciando criação de quiz para professor {professorId}");
+                
+                var professor = await _userRepository.GetByIdAsync(professorId);
+                if (professor == null || professor.Role.ToString() != "Professor")
                 {
-                    QuizId = quiz.Id,
-                    TextoQuestao = questaoRequest.TextoQuestao,
-                    TipoQuestao = questaoRequest.TipoQuestao,
-                    Pontos = questaoRequest.Pontos,
-                    OrdemIndice = questaoRequest.OrdemIndice,
+                    Console.WriteLine($"Professor {professorId} não encontrado ou não é professor");
+                    throw new ArgumentException("Professor não encontrado");
+                }
+
+                Console.WriteLine($"Professor validado: {professor.Username}");
+
+                // Validar categoria
+                Console.WriteLine($"Validando categoria {request.CategoriaId}");
+                var categoria = await _context.Categorias
+                    .FirstOrDefaultAsync(c => c.Id == request.CategoriaId && c.Ativo);
+                if (categoria == null)
+                {
+                    Console.WriteLine($"Categoria {request.CategoriaId} não encontrada");
+                    throw new ArgumentException("Categoria não encontrada");
+                }
+
+                Console.WriteLine($"Categoria validada: {categoria.Nome}");
+
+                // Criar quiz
+                Console.WriteLine("Criando quiz...");
+                var quiz = new Quizzes
+                {
+                    Titulo = request.Titulo,
+                    Descricao = request.Descricao,
+                    CategoriaId = request.CategoriaId,
+                    CriadoPor = professorId,
+                    TempoLimite = request.TempoLimite,
+                    MaxTentativas = request.MaxTentativas,
                     Ativo = true,
+                    Publico = request.Publico,
                     DataCriacao = DateTime.UtcNow,
                     DataAtualizacao = DateTime.UtcNow
                 };
 
-                _context.Questoes.Add(questao);
+                _context.Quizzes.Add(quiz);
                 await _context.SaveChangesAsync();
+                Console.WriteLine($"Quiz criado com ID: {quiz.Id}");
 
-                // Criar opções
-                foreach (var opcaoRequest in questaoRequest.Opcoes)
+                // Criar questões
+                Console.WriteLine($"Criando {request.Questoes.Count} questões...");
+                foreach (var questaoRequest in request.Questoes)
                 {
-                    var opcao = new OpcoesQuestao
+                    try
                     {
-                        QuestaoId = questao.Id,
-                        TextoOpcao = opcaoRequest.TextoOpcao,
-                        Correta = opcaoRequest.Correta,
-                        OrdemIndice = opcaoRequest.OrdemIndice,
-                        DataCriacao = DateTime.UtcNow
-                    };
+                        var questao = new Questoes
+                        {
+                            QuizId = quiz.Id,
+                            TextoQuestao = questaoRequest.TextoQuestao,
+                            TipoQuestao = questaoRequest.TipoQuestao,
+                            Pontos = questaoRequest.Pontos,
+                            OrdemIndice = questaoRequest.OrdemIndice,
+                            Ativo = true,
+                            DataCriacao = DateTime.UtcNow,
+                            DataAtualizacao = DateTime.UtcNow
+                        };
 
-                    _context.OpcoesQuestao.Add(opcao);
+                        _context.Questoes.Add(questao);
+                        await _context.SaveChangesAsync();
+                        Console.WriteLine($"Questão criada com ID: {questao.Id}");
+
+                        // Criar opções
+                        Console.WriteLine($"Criando {questaoRequest.Opcoes.Count} opções para questão {questao.Id}");
+                        foreach (var opcaoRequest in questaoRequest.Opcoes)
+                        {
+                            var opcao = new OpcoesQuestao
+                            {
+                                QuestaoId = questao.Id,
+                                TextoOpcao = opcaoRequest.TextoOpcao,
+                                Correta = opcaoRequest.Correta,
+                                OrdemIndice = opcaoRequest.OrdemIndice,
+                                DataCriacao = DateTime.UtcNow
+                            };
+
+                            _context.OpcoesQuestao.Add(opcao);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Erro ao criar questão: {ex.Message}");
+                        throw;
+                    }
                 }
+
+                await _context.SaveChangesAsync();
+                Console.WriteLine("Todas as opções salvas com sucesso");
+
+                return new CriarQuizResponseDTO
+                {
+                    Id = quiz.Id,
+                    Titulo = quiz.Titulo,
+                    Mensagem = "Quiz criado com sucesso!"
+                };
             }
-
-            await _context.SaveChangesAsync();
-
-            return new CriarQuizResponseDTO
+            catch (Exception ex)
             {
-                Id = quiz.Id,
-                Titulo = quiz.Titulo,
-                Mensagem = "Quiz criado com sucesso!"
-            };
+                Console.WriteLine($"Erro na criação do quiz: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                throw;
+            }
         }
 
         public async Task<AtualizarQuizResponseDTO> AtualizarQuizAsync(int professorId, int quizId, AtualizarQuizRequestDTO request)

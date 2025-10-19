@@ -21,43 +21,71 @@ namespace eduQuizApis.Application.Services
         // Dashboard
         public async Task<DashboardProfessorDTO> ObterDashboardAsync(int professorId)
         {
-            var professor = await _userRepository.GetByIdAsync(professorId);
-            if (professor == null || professor.Role.ToString() != "Professor")
-                throw new ArgumentException("Professor não encontrado");
-
-            // Obter quizzes criados pelo professor
-            var quizzesCriados = await _context.Quizzes
-                .Where(q => q.CriadoPor == professorId)
-                .CountAsync();
-
-            // Obter média dos alunos nos quizzes do professor
-            var mediaDosAlunos = await CalcularMediaDosAlunosAsync(professorId);
-
-            // Obter total de alunos que fizeram quizzes do professor
-            var totalAlunos = await _context.TentativasQuiz
-                .Include(t => t.Quiz)
-                .Where(t => t.Quiz.CriadoPor == professorId && t.Concluida)
-                .Select(t => t.UsuarioId)
-                .Distinct()
-                .CountAsync();
-
-            // Obter total de tentativas
-            var totalTentativas = await _context.TentativasQuiz
-                .Include(t => t.Quiz)
-                .Where(t => t.Quiz.CriadoPor == professorId && t.Concluida)
-                .CountAsync();
-
-            // Obter quizzes recentes
-            var quizzesRecentes = await ObterQuizzesRecentesAsync(professorId);
-
-            return new DashboardProfessorDTO
+            try
             {
-                QuizzesCriados = quizzesCriados,
-                MediaDosAlunos = Math.Round(mediaDosAlunos, 1),
-                TotalAlunos = totalAlunos,
-                TotalTentativas = totalTentativas,
-                QuizzesRecentes = quizzesRecentes
-            };
+                var professor = await _userRepository.GetByIdAsync(professorId);
+                if (professor == null || professor.Role.ToString() != "Professor")
+                    throw new ArgumentException("Professor não encontrado");
+
+                // Obter quizzes criados pelo professor
+                var quizzesCriados = await _context.Quizzes
+                    .Where(q => q.CriadoPor == professorId)
+                    .CountAsync();
+
+                // Simplificar consultas para evitar problemas de relacionamentos
+                var mediaDosAlunos = 0.0m;
+                var totalAlunos = 0;
+                var totalTentativas = 0;
+
+                try
+                {
+                    // Obter IDs dos quizzes do professor
+                    var quizIds = await _context.Quizzes
+                        .Where(q => q.CriadoPor == professorId)
+                        .Select(q => q.Id)
+                        .ToListAsync();
+
+                    if (quizIds.Any())
+                    {
+                        // Calcular estatísticas usando IDs dos quizzes
+                        var tentativas = await _context.TentativasQuiz
+                            .Where(t => quizIds.Contains(t.QuizId) && t.Concluida)
+                            .ToListAsync();
+
+                        totalTentativas = tentativas.Count;
+                        totalAlunos = tentativas.Select(t => t.UsuarioId).Distinct().Count();
+
+                        if (tentativas.Any(t => t.Pontuacao.HasValue && t.PontuacaoMaxima.HasValue))
+                        {
+                            mediaDosAlunos = tentativas
+                                .Where(t => t.Pontuacao.HasValue && t.PontuacaoMaxima.HasValue)
+                                .Average(t => (t.Pontuacao.Value / t.PontuacaoMaxima.Value) * 100);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Log do erro mas não falha o dashboard
+                    Console.WriteLine($"Erro ao calcular estatísticas: {ex.Message}");
+                }
+
+                // Obter quizzes recentes
+                var quizzesRecentes = await ObterQuizzesRecentesAsync(professorId);
+
+                return new DashboardProfessorDTO
+                {
+                    QuizzesCriados = quizzesCriados,
+                    MediaDosAlunos = Math.Round(mediaDosAlunos, 1),
+                    TotalAlunos = totalAlunos,
+                    TotalTentativas = totalTentativas,
+                    QuizzesRecentes = quizzesRecentes
+                };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Erro no ObterDashboardAsync: {ex.Message}");
+                throw;
+            }
         }
 
         // Gerenciamento de Quizzes
@@ -543,22 +571,49 @@ namespace eduQuizApis.Application.Services
 
         private async Task<List<QuizResumoDTO>> ObterQuizzesRecentesAsync(int professorId)
         {
-            return await _context.Quizzes
-                .Include(q => q.Categoria)
-                .Where(q => q.CriadoPor == professorId)
-                .OrderByDescending(q => q.DataCriacao)
-                .Take(5)
-                .Select(q => new QuizResumoDTO
+            try
+            {
+                var quizzes = await _context.Quizzes
+                    .Include(q => q.Categoria)
+                    .Where(q => q.CriadoPor == professorId)
+                    .OrderByDescending(q => q.DataCriacao)
+                    .Take(5)
+                    .ToListAsync();
+
+                var resultado = new List<QuizResumoDTO>();
+
+                foreach (var q in quizzes)
                 {
-                    Id = q.Id,
-                    Titulo = q.Titulo,
-                    Categoria = q.Categoria.Nome,
-                    TotalTentativas = _context.TentativasQuiz.Count(t => t.QuizId == q.Id && t.Concluida),
-                    MediaPontuacao = 0, // Será calculado separadamente se necessário
-                    DataCriacao = q.DataCriacao,
-                    Publicado = q.Publico
-                })
-                .ToListAsync();
+                    var totalTentativas = 0;
+                    try
+                    {
+                        totalTentativas = await _context.TentativasQuiz
+                            .CountAsync(t => t.QuizId == q.Id && t.Concluida);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Erro ao contar tentativas para quiz {q.Id}: {ex.Message}");
+                    }
+
+                    resultado.Add(new QuizResumoDTO
+                    {
+                        Id = q.Id,
+                        Titulo = q.Titulo,
+                        Categoria = q.Categoria?.Nome ?? "Sem categoria",
+                        TotalTentativas = totalTentativas,
+                        MediaPontuacao = 0, // Será calculado separadamente se necessário
+                        DataCriacao = q.DataCriacao,
+                        Publicado = q.Publico
+                    });
+                }
+
+                return resultado;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Erro no ObterQuizzesRecentesAsync: {ex.Message}");
+                return new List<QuizResumoDTO>();
+            }
         }
 
         private async Task GerenciarQuestoesAsync(int quizId, List<AtualizarQuestaoRequestDTO> questoesRequest)

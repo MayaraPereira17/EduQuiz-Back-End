@@ -35,6 +35,7 @@ namespace eduQuizApis.Application.Services
 
             // Obter total de alunos que fizeram quizzes do professor
             var totalAlunos = await _context.TentativasQuiz
+                .Include(t => t.Quiz)
                 .Where(t => t.Quiz.CriadoPor == professorId && t.Concluida)
                 .Select(t => t.UsuarioId)
                 .Distinct()
@@ -42,6 +43,7 @@ namespace eduQuizApis.Application.Services
 
             // Obter total de tentativas
             var totalTentativas = await _context.TentativasQuiz
+                .Include(t => t.Quiz)
                 .Where(t => t.Quiz.CriadoPor == professorId && t.Concluida)
                 .CountAsync();
 
@@ -529,6 +531,7 @@ namespace eduQuizApis.Application.Services
         private async Task<decimal> CalcularMediaDosAlunosAsync(int professorId)
         {
             var tentativas = await _context.TentativasQuiz
+                .Include(t => t.Quiz)
                 .Where(t => t.Quiz.CriadoPor == professorId && t.Concluida && 
                            t.Pontuacao.HasValue && t.PontuacaoMaxima.HasValue)
                 .ToListAsync();
@@ -703,13 +706,16 @@ namespace eduQuizApis.Application.Services
             var mediaDosAlunos = await CalcularMediaDosAlunosAsync(professorId);
 
             var totalAlunos = await _context.TentativasQuiz
+                .Include(t => t.Quiz)
                 .Where(t => t.Quiz.CriadoPor == professorId && t.Concluida)
                 .Select(t => t.UsuarioId)
                 .Distinct()
                 .CountAsync();
 
             var totalTentativas = await _context.TentativasQuiz
-                .CountAsync(t => t.Quiz.CriadoPor == professorId && t.Concluida);
+                .Include(t => t.Quiz)
+                .Where(t => t.Quiz.CriadoPor == professorId && t.Concluida)
+                .CountAsync();
 
             return new EstatisticasProfessorDTO
             {

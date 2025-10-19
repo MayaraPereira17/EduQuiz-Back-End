@@ -114,17 +114,26 @@ namespace eduQuizApis.Presentation.Web.Controllers
         {
             try
             {
+                Console.WriteLine("=== INÍCIO DA CRIAÇÃO DE QUIZ ===");
+                Console.WriteLine($"Request recebido: {System.Text.Json.JsonSerializer.Serialize(request)}");
+                
                 var professorId = ObterUsuarioId();
+                Console.WriteLine($"Professor ID extraído: {professorId}");
+                
                 var resultado = await _professorService.CriarQuizAsync(professorId, request);
+                Console.WriteLine("=== QUIZ CRIADO COM SUCESSO ===");
                 return CreatedAtAction(nameof(ObterQuizPorId), new { quizId = resultado.Id }, resultado);
             }
             catch (ArgumentException ex)
             {
+                Console.WriteLine($"ERRO de argumento: {ex.Message}");
                 return BadRequest(ex.Message);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, "Erro interno do servidor");
+                Console.WriteLine($"ERRO GERAL na criação de quiz: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                return StatusCode(500, $"Erro interno do servidor: {ex.Message}");
             }
         }
 

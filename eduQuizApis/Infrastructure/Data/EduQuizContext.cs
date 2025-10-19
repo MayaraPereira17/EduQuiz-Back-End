@@ -76,11 +76,17 @@ namespace eduQuizApis.Infrastructure.Data
             modelBuilder.Entity<Categorias>(entity =>
             {
                 entity.ToTable("Categorias");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("Id").ValueGeneratedOnAdd();
                 entity.Property(e => e.Nome).HasColumnName("Nome").IsRequired().HasMaxLength(100);
                 entity.Property(e => e.Descricao).HasColumnName("Descricao");
                 entity.Property(e => e.Ativo).HasColumnName("Ativo").HasDefaultValue(true);
                 entity.Property(e => e.DataCriacao).HasColumnName("DataCriacao").HasDefaultValueSql("CURRENT_TIMESTAMP");
                 entity.Property(e => e.DataAtualizacao).HasColumnName("DataAtualizacao").HasDefaultValueSql("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+                
+                // Ignorar as propriedades da interface IEntity (não mapear para colunas)
+                entity.Ignore(e => e.CreatedAt);
+                entity.Ignore(e => e.UpdatedAt);
             });
 
             // Configurações para Quizzes
@@ -100,6 +106,10 @@ namespace eduQuizApis.Infrastructure.Data
                 entity.Property(e => e.Publico).HasColumnName("Publico").HasDefaultValue(false);
                 entity.Property(e => e.DataCriacao).HasColumnName("DataCriacao").HasDefaultValueSql("CURRENT_TIMESTAMP");
                 entity.Property(e => e.DataAtualizacao).HasColumnName("DataAtualizacao").HasDefaultValueSql("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+                
+                // Ignorar as propriedades da interface IEntity (não mapear para colunas)
+                entity.Ignore(e => e.CreatedAt);
+                entity.Ignore(e => e.UpdatedAt);
 
                 // Relacionamentos
                 entity.HasOne(q => q.Categoria)
@@ -130,6 +140,10 @@ namespace eduQuizApis.Infrastructure.Data
                 entity.Property(e => e.Ativo).HasColumnName("Ativo").HasDefaultValue(true);
                 entity.Property(e => e.DataCriacao).HasColumnName("DataCriacao").HasDefaultValueSql("CURRENT_TIMESTAMP");
                 entity.Property(e => e.DataAtualizacao).HasColumnName("DataAtualizacao").HasDefaultValueSql("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+                
+                // Ignorar as propriedades da interface IEntity (não mapear para colunas)
+                entity.Ignore(e => e.CreatedAt);
+                entity.Ignore(e => e.UpdatedAt);
 
                 // Relacionamentos
                 entity.HasOne(q => q.Quiz)
@@ -149,6 +163,10 @@ namespace eduQuizApis.Infrastructure.Data
                 entity.Property(e => e.Correta).HasColumnName("Correta").HasDefaultValue(false);
                 entity.Property(e => e.OrdemIndice).HasColumnName("OrdemIndice").IsRequired();
                 entity.Property(e => e.DataCriacao).HasColumnName("DataCriacao").HasDefaultValueSql("CURRENT_TIMESTAMP");
+                
+                // Ignorar as propriedades da interface IEntity (não mapear para colunas)
+                entity.Ignore(e => e.CreatedAt);
+                entity.Ignore(e => e.UpdatedAt);
 
                 // Relacionamentos
                 entity.HasOne(o => o.Questao)
@@ -170,6 +188,10 @@ namespace eduQuizApis.Infrastructure.Data
                 entity.Property(e => e.TempoGasto).HasColumnName("TempoGasto");
                 entity.Property(e => e.Concluida).HasColumnName("Concluida").HasDefaultValue(false);
                 entity.Property(e => e.DataCriacao).HasColumnName("DataCriacao").HasDefaultValueSql("CURRENT_TIMESTAMP");
+                
+                // Ignorar as propriedades da interface IEntity (não mapear para colunas)
+                entity.Ignore(e => e.CreatedAt);
+                entity.Ignore(e => e.UpdatedAt);
 
                 // Relacionamentos
                 entity.HasOne(t => t.Quiz)
@@ -194,6 +216,10 @@ namespace eduQuizApis.Infrastructure.Data
                 entity.Property(e => e.Correta).HasColumnName("Correta");
                 entity.Property(e => e.PontosGanhos).HasColumnName("PontosGanhos").HasColumnType("DECIMAL(5,2)").HasDefaultValue(0);
                 entity.Property(e => e.DataResposta).HasColumnName("DataResposta").HasDefaultValueSql("CURRENT_TIMESTAMP");
+                
+                // Ignorar as propriedades da interface IEntity (não mapear para colunas)
+                entity.Ignore(e => e.CreatedAt);
+                entity.Ignore(e => e.UpdatedAt);
 
                 // Relacionamentos
                 entity.HasOne(r => r.Tentativa)
@@ -210,6 +236,47 @@ namespace eduQuizApis.Infrastructure.Data
                     .WithMany()
                     .HasForeignKey(r => r.OpcaoSelecionadaId)
                     .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // Configurações básicas para outras entidades que implementam IEntity
+            modelBuilder.Entity<ConfiguracoesSistema>(entity =>
+            {
+                entity.ToTable("ConfiguracoesSistema");
+                entity.HasKey(e => e.Id);
+                entity.Ignore(e => e.CreatedAt);
+                entity.Ignore(e => e.UpdatedAt);
+            });
+
+            modelBuilder.Entity<Conquistas>(entity =>
+            {
+                entity.ToTable("Conquistas");
+                entity.HasKey(e => e.Id);
+                entity.Ignore(e => e.CreatedAt);
+                entity.Ignore(e => e.UpdatedAt);
+            });
+
+            modelBuilder.Entity<ConquistasAlunos>(entity =>
+            {
+                entity.ToTable("ConquistasAlunos");
+                entity.HasKey(e => e.Id);
+                entity.Ignore(e => e.CreatedAt);
+                entity.Ignore(e => e.UpdatedAt);
+            });
+
+            modelBuilder.Entity<RankingAlunos>(entity =>
+            {
+                entity.ToTable("RankingAlunos");
+                entity.HasKey(e => e.Id);
+                entity.Ignore(e => e.CreatedAt);
+                entity.Ignore(e => e.UpdatedAt);
+            });
+
+            modelBuilder.Entity<RelatoriosPerformance>(entity =>
+            {
+                entity.ToTable("RelatoriosPerformance");
+                entity.HasKey(e => e.Id);
+                entity.Ignore(e => e.CreatedAt);
+                entity.Ignore(e => e.UpdatedAt);
             });
 
             // Seed Data - Usuário técnico padrão

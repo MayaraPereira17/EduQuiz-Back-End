@@ -187,10 +187,18 @@ namespace eduQuizApis.Application.Services
                 Console.WriteLine($"Dificuldade normalizada: {dificuldadeNormalizada}");
                 
                 var professor = await _userRepository.GetByIdAsync(professorId);
-                if (professor == null || professor.Role.ToString() != "Professor")
+                if (professor == null)
                 {
-                    Console.WriteLine($"Professor {professorId} não encontrado ou não é professor");
+                    Console.WriteLine($"Professor {professorId} não encontrado no banco");
                     throw new ArgumentException("Professor não encontrado");
+                }
+                
+                Console.WriteLine($"Professor encontrado: {professor.Username}, Role: {professor.Role}");
+                
+                if (professor.Role.ToString() != "Professor")
+                {
+                    Console.WriteLine($"Usuário {professorId} não é professor, Role atual: {professor.Role}");
+                    throw new ArgumentException("Usuário não é professor");
                 }
 
                 Console.WriteLine($"Professor validado: {professor.Username}");
@@ -242,6 +250,13 @@ namespace eduQuizApis.Application.Services
 
                 // Criar questões
                 Console.WriteLine($"Criando {request.Questoes.Count} questões...");
+                
+                if (request.Questoes == null || !request.Questoes.Any())
+                {
+                    Console.WriteLine("ERRO: Nenhuma questão fornecida no request");
+                    throw new ArgumentException("Pelo menos uma questão é obrigatória");
+                }
+                
                 foreach (var questaoRequest in request.Questoes)
                 {
                     try
@@ -263,8 +278,15 @@ namespace eduQuizApis.Application.Services
                         Console.WriteLine($"Questão criada com ID: {questao.Id}");
 
                         // Criar opções
-                        Console.WriteLine($"Criando {questaoRequest.Opcoes.Count} opções para questão {questao.Id}");
-                        foreach (var opcaoRequest in questaoRequest.Opcoes)
+                        Console.WriteLine($"Criando {questaoRequest.Opcoes?.Count ?? 0} opções para questão {questao.Id}");
+                        
+                        if (questaoRequest.Opcoes == null || !questaoRequest.Opcoes.Any())
+                        {
+                            Console.WriteLine($"AVISO: Questão {questao.Id} não tem opções");
+                        }
+                        else
+                        {
+                            foreach (var opcaoRequest in questaoRequest.Opcoes)
                         {
                             var opcao = new OpcoesQuestao
                             {
@@ -276,6 +298,7 @@ namespace eduQuizApis.Application.Services
                             };
 
                             _context.OpcoesQuestao.Add(opcao);
+                        }
                         }
                     }
                     catch (Exception ex)

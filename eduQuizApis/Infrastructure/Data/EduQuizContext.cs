@@ -72,6 +72,136 @@ namespace eduQuizApis.Infrastructure.Data
                 entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
             });
 
+            // Configurações para Categorias
+            modelBuilder.Entity<Categorias>(entity =>
+            {
+                entity.ToTable("Categorias");
+                entity.Property(e => e.Nome).HasColumnName("Nome").IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Descricao).HasColumnName("Descricao");
+                entity.Property(e => e.Ativo).HasColumnName("Ativo").HasDefaultValue(true);
+                entity.Property(e => e.DataCriacao).HasColumnName("DataCriacao").HasDefaultValueSql("CURRENT_TIMESTAMP");
+                entity.Property(e => e.DataAtualizacao).HasColumnName("DataAtualizacao").HasDefaultValueSql("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+            });
+
+            // Configurações para Quizzes
+            modelBuilder.Entity<Quizzes>(entity =>
+            {
+                entity.ToTable("Quizzes");
+                entity.Property(e => e.Titulo).HasColumnName("Titulo").IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Descricao).HasColumnName("Descricao");
+                entity.Property(e => e.CategoriaId).HasColumnName("CategoriaId").IsRequired();
+                entity.Property(e => e.CriadoPor).HasColumnName("CriadoPor").IsRequired();
+                entity.Property(e => e.TempoLimite).HasColumnName("TempoLimite");
+                entity.Property(e => e.MaxTentativas).HasColumnName("MaxTentativas").HasDefaultValue(1);
+                entity.Property(e => e.Ativo).HasColumnName("Ativo").HasDefaultValue(true);
+                entity.Property(e => e.Publico).HasColumnName("Publico").HasDefaultValue(false);
+                entity.Property(e => e.DataCriacao).HasColumnName("DataCriacao").HasDefaultValueSql("CURRENT_TIMESTAMP");
+                entity.Property(e => e.DataAtualizacao).HasColumnName("DataAtualizacao").HasDefaultValueSql("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+
+                // Relacionamentos
+                entity.HasOne(q => q.Categoria)
+                    .WithMany()
+                    .HasForeignKey(q => q.CategoriaId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(q => q.CriadoPorUser)
+                    .WithMany()
+                    .HasForeignKey(q => q.CriadoPor)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Configurações para Questoes
+            modelBuilder.Entity<Questoes>(entity =>
+            {
+                entity.ToTable("Questoes");
+                entity.Property(e => e.QuizId).HasColumnName("QuizId").IsRequired();
+                entity.Property(e => e.TextoQuestao).HasColumnName("TextoQuestao").IsRequired();
+                entity.Property(e => e.TipoQuestao).HasColumnName("TipoQuestao").IsRequired().HasMaxLength(50);
+                entity.Property(e => e.Pontos).HasColumnName("Pontos").HasDefaultValue(1);
+                entity.Property(e => e.OrdemIndice).HasColumnName("OrdemIndice").IsRequired();
+                entity.Property(e => e.Ativo).HasColumnName("Ativo").HasDefaultValue(true);
+                entity.Property(e => e.DataCriacao).HasColumnName("DataCriacao").HasDefaultValueSql("CURRENT_TIMESTAMP");
+                entity.Property(e => e.DataAtualizacao).HasColumnName("DataAtualizacao").HasDefaultValueSql("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+
+                // Relacionamentos
+                entity.HasOne(q => q.Quiz)
+                    .WithMany(q => q.Questoes)
+                    .HasForeignKey(q => q.QuizId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Configurações para OpcoesQuestao
+            modelBuilder.Entity<OpcoesQuestao>(entity =>
+            {
+                entity.ToTable("OpcoesQuestao");
+                entity.Property(e => e.QuestaoId).HasColumnName("QuestaoId").IsRequired();
+                entity.Property(e => e.TextoOpcao).HasColumnName("TextoOpcao").IsRequired();
+                entity.Property(e => e.Correta).HasColumnName("Correta").HasDefaultValue(false);
+                entity.Property(e => e.OrdemIndice).HasColumnName("OrdemIndice").IsRequired();
+                entity.Property(e => e.DataCriacao).HasColumnName("DataCriacao").HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                // Relacionamentos
+                entity.HasOne(o => o.Questao)
+                    .WithMany(q => q.Opcoes)
+                    .HasForeignKey(o => o.QuestaoId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Configurações para TentativasQuiz
+            modelBuilder.Entity<TentativasQuiz>(entity =>
+            {
+                entity.ToTable("TentativasQuiz");
+                entity.Property(e => e.QuizId).HasColumnName("QuizId").IsRequired();
+                entity.Property(e => e.UsuarioId).HasColumnName("UsuarioId").IsRequired();
+                entity.Property(e => e.DataInicio).HasColumnName("DataInicio").IsRequired().HasDefaultValueSql("CURRENT_TIMESTAMP");
+                entity.Property(e => e.DataConclusao).HasColumnName("DataConclusao");
+                entity.Property(e => e.Pontuacao).HasColumnName("Pontuacao").HasColumnType("DECIMAL(5,2)");
+                entity.Property(e => e.PontuacaoMaxima).HasColumnName("PontuacaoMaxima").HasColumnType("DECIMAL(5,2)");
+                entity.Property(e => e.TempoGasto).HasColumnName("TempoGasto");
+                entity.Property(e => e.Concluida).HasColumnName("Concluida").HasDefaultValue(false);
+                entity.Property(e => e.DataCriacao).HasColumnName("DataCriacao").HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                // Relacionamentos
+                entity.HasOne(t => t.Quiz)
+                    .WithMany()
+                    .HasForeignKey(t => t.QuizId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(t => t.Usuario)
+                    .WithMany()
+                    .HasForeignKey(t => t.UsuarioId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Configurações para Respostas
+            modelBuilder.Entity<Respostas>(entity =>
+            {
+                entity.ToTable("Respostas");
+                entity.Property(e => e.TentativaId).HasColumnName("TentativaId").IsRequired();
+                entity.Property(e => e.QuestaoId).HasColumnName("QuestaoId").IsRequired();
+                entity.Property(e => e.OpcaoSelecionadaId).HasColumnName("OpcaoSelecionadaId");
+                entity.Property(e => e.TextoResposta).HasColumnName("TextoResposta");
+                entity.Property(e => e.Correta).HasColumnName("Correta");
+                entity.Property(e => e.PontosGanhos).HasColumnName("PontosGanhos").HasColumnType("DECIMAL(5,2)").HasDefaultValue(0);
+                entity.Property(e => e.DataResposta).HasColumnName("DataResposta").HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                // Relacionamentos
+                entity.HasOne(r => r.Tentativa)
+                    .WithMany(t => t.Respostas)
+                    .HasForeignKey(r => r.TentativaId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(r => r.Questao)
+                    .WithMany()
+                    .HasForeignKey(r => r.QuestaoId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(r => r.OpcaoSelecionada)
+                    .WithMany()
+                    .HasForeignKey(r => r.OpcaoSelecionadaId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
             // Seed Data - Usuário técnico padrão
             modelBuilder.Entity<User>().HasData(
                 new User

@@ -182,6 +182,10 @@ namespace eduQuizApis.Application.Services
                 Console.WriteLine($"Iniciando criação de quiz para professor {professorId}");
                 Console.WriteLine($"Payload recebido - Título: {request.Titulo}, CategoriaId: {request.CategoriaId}, Dificuldade: {request.Dificuldade}");
                 
+                // Normalizar dificuldade (aceitar com e sem acentos)
+                var dificuldadeNormalizada = NormalizarDificuldade(request.Dificuldade);
+                Console.WriteLine($"Dificuldade normalizada: {dificuldadeNormalizada}");
+                
                 var professor = await _userRepository.GetByIdAsync(professorId);
                 if (professor == null || professor.Role.ToString() != "Professor")
                 {
@@ -211,7 +215,7 @@ namespace eduQuizApis.Application.Services
                     Descricao = request.Descricao,
                     CategoriaId = request.CategoriaId,
                     CriadoPor = professorId,
-                    Dificuldade = request.Dificuldade,
+                    Dificuldade = dificuldadeNormalizada,
                     TempoLimite = request.TempoLimite,
                     MaxTentativas = request.MaxTentativas,
                     Ativo = true,
@@ -817,6 +821,22 @@ namespace eduQuizApis.Application.Services
                 TotalAlunos = totalAlunos,
                 TotalTentativas = totalTentativas,
                 QuizzesPublicados = quizzesPublicados
+            };
+        }
+
+        private string NormalizarDificuldade(string dificuldade)
+        {
+            if (string.IsNullOrEmpty(dificuldade))
+                return "Media";
+
+            var dificuldadeLower = dificuldade.ToLower().Trim();
+            
+            return dificuldadeLower switch
+            {
+                "fácil" or "facil" or "facil" => "Facil",
+                "média" or "medio" or "médio" or "media" => "Media", 
+                "difícil" or "dificil" or "dificil" => "Dificil",
+                _ => "Media" // Padrão para valores não reconhecidos
             };
         }
     }

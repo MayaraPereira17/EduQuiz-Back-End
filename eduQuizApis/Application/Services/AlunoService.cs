@@ -217,6 +217,9 @@ namespace eduQuizApis.Application.Services
                 {
                     QuestaoId = questao.Id,
                     OpcaoSelecionadaId = resposta.OpcaoSelecionadaId,
+                    TextoRespostaSelecionada = opcaoSelecionada?.TextoOpcao,
+                    OpcaoCorretaId = opcaoCorreta?.Id,
+                    TextoRespostaCorreta = opcaoCorreta?.TextoOpcao,
                     Correta = correta,
                     PontosObtidos = pontosObtidos
                 });

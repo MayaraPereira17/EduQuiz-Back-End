@@ -254,6 +254,9 @@ namespace eduQuizApis.Application.DTOs
     {
         public int QuestaoId { get; set; }
         public int? OpcaoSelecionadaId { get; set; }
+        public string? TextoRespostaSelecionada { get; set; }
+        public int? OpcaoCorretaId { get; set; }
+        public string? TextoRespostaCorreta { get; set; }
         public bool Correta { get; set; }
         public int PontosObtidos { get; set; }
     }

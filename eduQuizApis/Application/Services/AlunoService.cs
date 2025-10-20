@@ -89,6 +89,168 @@ namespace eduQuizApis.Application.Services
             return quizzes;
         }
 
+        public async Task<QuizDetalhesDTO> ObterQuizPorIdAsync(int usuarioId, int quizId)
+        {
+            var quiz = await _context.Quizzes
+                .Include(q => q.Categoria)
+                .Include(q => q.Questoes.Where(quest => quest.Ativo).OrderBy(quest => quest.OrdemIndice))
+                .ThenInclude(quest => quest.Opcoes.OrderBy(op => op.OrdemIndice))
+                .FirstOrDefaultAsync(q => q.Id == quizId && q.Ativo && q.Publico);
+
+            if (quiz == null)
+                throw new ArgumentException("Quiz não encontrado ou não disponível.");
+
+            // Verificar tentativas restantes
+            var tentativasRealizadas = await _context.TentativasQuiz
+                .CountAsync(t => t.UsuarioId == usuarioId && t.QuizId == quizId);
+            
+            var tentativasRestantes = quiz.MaxTentativas - tentativasRealizadas;
+
+            return new QuizDetalhesDTO
+            {
+                Id = quiz.Id,
+                Titulo = quiz.Titulo,
+                Descricao = quiz.Descricao ?? "",
+                Categoria = new CategoriaDTO
+                {
+                    Id = quiz.Categoria.Id,
+                    Nome = quiz.Categoria.Nome
+                },
+                Dificuldade = quiz.Dificuldade,
+                TempoLimite = quiz.TempoLimite,
+                MaxTentativas = quiz.MaxTentativas,
+                TentativasRestantes = Math.Max(0, tentativasRestantes),
+                TotalQuestoes = quiz.Questoes.Count,
+                CriadoPor = "Professor", // Pode ser obtido do relacionamento com Usuarios
+                DataCriacao = quiz.DataCriacao,
+                Questoes = quiz.Questoes.Select(questao => new QuestaoDetalhesDTO
+                {
+                    Id = questao.Id,
+                    TextoQuestao = questao.TextoQuestao,
+                    TipoQuestao = questao.TipoQuestao,
+                    Pontos = questao.Pontos,
+                    OrdemIndice = questao.OrdemIndice,
+                    Opcoes = questao.Opcoes.Select(opcao => new OpcaoDetalhesDTO
+                    {
+                        Id = opcao.Id,
+                        TextoOpcao = opcao.TextoOpcao,
+                        OrdemIndice = opcao.OrdemIndice
+                    }).ToList()
+                }).ToList()
+            };
+        }
+
+        public async Task<ResponderQuizResponseDTO> ResponderQuizAsync(int usuarioId, int quizId, ResponderQuizRequestDTO request)
+        {
+            var quiz = await _context.Quizzes
+                .Include(q => q.Questoes.Where(quest => quest.Ativo).OrderBy(quest => quest.OrdemIndice))
+                .ThenInclude(quest => quest.Opcoes.OrderBy(op => op.OrdemIndice))
+                .FirstOrDefaultAsync(q => q.Id == quizId && q.Ativo && q.Publico);
+
+            if (quiz == null)
+                throw new ArgumentException("Quiz não encontrado ou não disponível.");
+
+            // Verificar se ainda há tentativas disponíveis
+            var tentativasRealizadas = await _context.TentativasQuiz
+                .CountAsync(t => t.UsuarioId == usuarioId && t.QuizId == quizId);
+            
+            if (tentativasRealizadas >= quiz.MaxTentativas)
+                throw new InvalidOperationException("Você já excedeu o número máximo de tentativas para este quiz.");
+
+            // Criar nova tentativa
+            var tentativa = new TentativasQuiz
+            {
+                UsuarioId = usuarioId,
+                QuizId = quizId,
+                DataInicio = DateTime.UtcNow,
+                Concluida = true,
+                DataConclusao = DateTime.UtcNow,
+                Pontuacao = 0,
+                PontuacaoMaxima = quiz.Questoes.Sum(q => q.Pontos)
+            };
+
+            _context.TentativasQuiz.Add(tentativa);
+            await _context.SaveChangesAsync();
+
+            // Processar respostas
+            var respostas = new List<RespostaResultadoDTO>();
+            var pontuacaoTotal = 0;
+            var respostasCorretas = 0;
+            var respostasIncorretas = 0;
+
+            foreach (var resposta in request.Respostas)
+            {
+                var questao = quiz.Questoes.FirstOrDefault(q => q.Id == resposta.QuestaoId);
+                if (questao == null) continue;
+
+                var opcaoCorreta = questao.Opcoes.FirstOrDefault(o => o.Correta);
+                var opcaoSelecionada = questao.Opcoes.FirstOrDefault(o => o.Id == resposta.OpcaoSelecionadaId);
+                
+                var correta = opcaoSelecionada?.Correta ?? false;
+                var pontosObtidos = correta ? questao.Pontos : 0;
+                
+                if (correta)
+                {
+                    pontuacaoTotal += pontosObtidos;
+                    respostasCorretas++;
+                }
+                else
+                {
+                    respostasIncorretas++;
+                }
+
+                // Salvar resposta no banco
+                var respostaEntity = new Respostas
+                {
+                    TentativaId = tentativa.Id,
+                    QuestaoId = questao.Id,
+                    OpcaoSelecionadaId = resposta.OpcaoSelecionadaId,
+                    TextoResposta = resposta.TextoResposta,
+                    Correta = correta,
+                    PontosGanhos = pontosObtidos,
+                    DataResposta = DateTime.UtcNow
+                };
+
+                _context.Respostas.Add(respostaEntity);
+
+                respostas.Add(new RespostaResultadoDTO
+                {
+                    QuestaoId = questao.Id,
+                    OpcaoSelecionadaId = resposta.OpcaoSelecionadaId,
+                    Correta = correta,
+                    PontosObtidos = pontosObtidos
+                });
+            }
+
+            // Atualizar tentativa com pontuação final
+            tentativa.Pontuacao = pontuacaoTotal;
+            _context.TentativasQuiz.Update(tentativa);
+            await _context.SaveChangesAsync();
+
+            // Atualizar ranking do aluno
+            await AtualizarRankingAsync(usuarioId, quiz.CategoriaId);
+
+            var percentualAcerto = tentativa.PontuacaoMaxima > 0 ? 
+                (decimal)tentativa.Pontuacao / tentativa.PontuacaoMaxima * 100 : 0;
+
+            return new ResponderQuizResponseDTO
+            {
+                TentativaId = tentativa.Id,
+                QuizId = quizId,
+                AlunoId = usuarioId,
+                PontuacaoTotal = pontuacaoTotal,
+                PontuacaoMaxima = (int)(tentativa.PontuacaoMaxima ?? 0),
+                PercentualAcerto = (decimal)percentualAcerto,
+                DataTentativa = tentativa.DataConclusao ?? DateTime.UtcNow,
+                TempoGasto = (int)((tentativa.DataConclusao - tentativa.DataInicio)?.TotalSeconds ?? 0),
+                RespostasCorretas = respostasCorretas,
+                RespostasIncorretas = respostasIncorretas,
+                Respostas = respostas,
+                Message = "Quiz respondido com sucesso!",
+                NovoRecorde = false // Pode ser implementado para verificar se é o melhor resultado
+            };
+        }
+
         public async Task<IniciarQuizResponseDTO> IniciarQuizAsync(int usuarioId, IniciarQuizRequestDTO request)
         {
             var quiz = await _context.Quizzes

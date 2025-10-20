@@ -182,4 +182,79 @@ namespace eduQuizApis.Application.DTOs
         public string Icone { get; set; } = string.Empty;
         public string Cor { get; set; } = string.Empty;
     }
+
+    // DTOs para Quiz Detalhado
+    public class QuizDetalhesDTO
+    {
+        public int Id { get; set; }
+        public string Titulo { get; set; } = string.Empty;
+        public string Descricao { get; set; } = string.Empty;
+        public CategoriaDTO Categoria { get; set; } = new CategoriaDTO();
+        public string Dificuldade { get; set; } = string.Empty;
+        public int? TempoLimite { get; set; }
+        public int MaxTentativas { get; set; }
+        public int TentativasRestantes { get; set; }
+        public int TotalQuestoes { get; set; }
+        public string CriadoPor { get; set; } = string.Empty;
+        public DateTime DataCriacao { get; set; }
+        public List<QuestaoDetalhesDTO> Questoes { get; set; } = new List<QuestaoDetalhesDTO>();
+    }
+
+
+    public class QuestaoDetalhesDTO
+    {
+        public int Id { get; set; }
+        public string TextoQuestao { get; set; } = string.Empty;
+        public string TipoQuestao { get; set; } = string.Empty;
+        public int Pontos { get; set; }
+        public int OrdemIndice { get; set; }
+        public List<OpcaoDetalhesDTO> Opcoes { get; set; } = new List<OpcaoDetalhesDTO>();
+    }
+
+    public class OpcaoDetalhesDTO
+    {
+        public int Id { get; set; }
+        public string TextoOpcao { get; set; } = string.Empty;
+        public int OrdemIndice { get; set; }
+    }
+
+    // DTOs para Responder Quiz Completo
+    public class ResponderQuizRequestDTO
+    {
+        [Required]
+        public List<RespostaQuizDTO> Respostas { get; set; } = new List<RespostaQuizDTO>();
+    }
+
+    public class RespostaQuizDTO
+    {
+        [Required]
+        public int QuestaoId { get; set; }
+        public int? OpcaoSelecionadaId { get; set; }
+        public string? TextoResposta { get; set; }
+    }
+
+    public class ResponderQuizResponseDTO
+    {
+        public int TentativaId { get; set; }
+        public int QuizId { get; set; }
+        public int AlunoId { get; set; }
+        public int PontuacaoTotal { get; set; }
+        public int PontuacaoMaxima { get; set; }
+        public decimal PercentualAcerto { get; set; }
+        public DateTime DataTentativa { get; set; }
+        public int TempoGasto { get; set; }
+        public int RespostasCorretas { get; set; }
+        public int RespostasIncorretas { get; set; }
+        public List<RespostaResultadoDTO> Respostas { get; set; } = new List<RespostaResultadoDTO>();
+        public string Message { get; set; } = string.Empty;
+        public bool NovoRecorde { get; set; }
+    }
+
+    public class RespostaResultadoDTO
+    {
+        public int QuestaoId { get; set; }
+        public int? OpcaoSelecionadaId { get; set; }
+        public bool Correta { get; set; }
+        public int PontosObtidos { get; set; }
+    }
 }

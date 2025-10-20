@@ -9,6 +9,8 @@ namespace eduQuizApis.Application.Interfaces
         
         // Quiz
         Task<List<QuizDisponivelDTO>> ObterQuizzesDisponiveisAsync(int usuarioId);
+        Task<QuizDetalhesDTO> ObterQuizPorIdAsync(int usuarioId, int quizId);
+        Task<ResponderQuizResponseDTO> ResponderQuizAsync(int usuarioId, int quizId, ResponderQuizRequestDTO request);
         Task<IniciarQuizResponseDTO> IniciarQuizAsync(int usuarioId, IniciarQuizRequestDTO request);
         Task<ResponderQuestaoResponseDTO> ResponderQuestaoAsync(int usuarioId, int tentativaId, ResponderQuestaoRequestDTO request);
         Task<ProgressoQuizDTO> ObterProgressoQuizAsync(int usuarioId, int tentativaId);

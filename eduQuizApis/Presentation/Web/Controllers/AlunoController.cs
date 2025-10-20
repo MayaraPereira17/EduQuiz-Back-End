@@ -61,7 +61,26 @@ namespace eduQuizApis.Presentation.Web.Controllers
         #region Quiz
 
         /// <summary>
-        /// Lista todos os quizzes disponíveis para o aluno
+        /// Lista todos os quizzes disponíveis para o aluno (endpoint principal)
+        /// </summary>
+        /// <returns>Lista de quizzes com informações básicas (título, descrição, categoria, dificuldade, tempo limite, etc.)</returns>
+        [HttpGet("quizzes")]
+        public async Task<ActionResult<List<QuizDisponivelDTO>>> ObterQuizzes()
+        {
+            try
+            {
+                var usuarioId = ObterUsuarioId();
+                var quizzes = await _alunoService.ObterQuizzesDisponiveisAsync(usuarioId);
+                return Ok(quizzes);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Erro interno do servidor");
+            }
+        }
+
+        /// <summary>
+        /// Lista todos os quizzes disponíveis para o aluno (endpoint alternativo)
         /// </summary>
         /// <returns>Lista de quizzes com informações básicas (título, descrição, categoria, dificuldade, tempo limite, etc.)</returns>
         [HttpGet("quizzes/disponiveis")]
@@ -72,6 +91,30 @@ namespace eduQuizApis.Presentation.Web.Controllers
                 var usuarioId = ObterUsuarioId();
                 var quizzes = await _alunoService.ObterQuizzesDisponiveisAsync(usuarioId);
                 return Ok(quizzes);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Erro interno do servidor");
+            }
+        }
+
+        /// <summary>
+        /// Obtém detalhes de um quiz específico para o aluno
+        /// </summary>
+        /// <param name="quizId">ID do quiz</param>
+        /// <returns>Detalhes completos do quiz incluindo questões e opções</returns>
+        [HttpGet("quizzes/{quizId}")]
+        public async Task<ActionResult<QuizDetalhesDTO>> ObterQuizPorId(int quizId)
+        {
+            try
+            {
+                var usuarioId = ObterUsuarioId();
+                var quiz = await _alunoService.ObterQuizPorIdAsync(usuarioId, quizId);
+                return Ok(quiz);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
             }
             catch (Exception ex)
             {
@@ -91,6 +134,35 @@ namespace eduQuizApis.Presentation.Web.Controllers
             {
                 var usuarioId = ObterUsuarioId();
                 var resultado = await _alunoService.IniciarQuizAsync(usuarioId, request);
+                return Ok(resultado);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Erro interno do servidor");
+            }
+        }
+
+        /// <summary>
+        /// Responde a um quiz completo (envia todas as respostas de uma vez)
+        /// </summary>
+        /// <param name="quizId">ID do quiz</param>
+        /// <param name="request">Todas as respostas do quiz</param>
+        /// <returns>Resultado completo do quiz</returns>
+        [HttpPost("quizzes/{quizId}/responder")]
+        public async Task<ActionResult<ResponderQuizResponseDTO>> ResponderQuiz(int quizId, [FromBody] ResponderQuizRequestDTO request)
+        {
+            try
+            {
+                var usuarioId = ObterUsuarioId();
+                var resultado = await _alunoService.ResponderQuizAsync(usuarioId, quizId, request);
                 return Ok(resultado);
             }
             catch (ArgumentException ex)

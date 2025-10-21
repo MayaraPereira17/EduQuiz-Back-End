@@ -764,6 +764,7 @@ namespace eduQuizApis.Application.Services
                     DataAtualizacao = DateTime.UtcNow
                 };
                 _context.RankingAlunos.Add(ranking);
+                await _context.SaveChangesAsync(); // Salvar primeiro para obter ID
             }
 
             // Calcular estatísticas atualizadas

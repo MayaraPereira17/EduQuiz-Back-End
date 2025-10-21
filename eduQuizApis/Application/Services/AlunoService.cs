@@ -475,43 +475,56 @@ namespace eduQuizApis.Application.Services
         // Ranking
         public async Task<RankingCompletoDTO> ObterRankingCompletoAsync(int usuarioId, string? busca = null)
         {
-            var query = _context.RankingAlunos
-                .Include(r => r.Usuario)
-                .Include(r => r.Categoria)
-                .Where(r => r.Usuario.IsActive && r.Usuario.Role.ToString() == "Aluno");
-
-            if (!string.IsNullOrEmpty(busca))
+            try
             {
-                query = query.Where(r => 
-                    r.Usuario.FirstName.Contains(busca) || 
-                    r.Usuario.LastName.Contains(busca));
-            }
+                var query = _context.RankingAlunos
+                    .Include(r => r.Usuario)
+                    .Include(r => r.Categoria)
+                    .Where(r => r.Usuario.IsActive && r.Usuario.Role.ToString() == "Aluno");
 
-            var rankings = await query
-                .OrderByDescending(r => r.PontuacaoTotal)
-                .ThenByDescending(r => r.MediaPontuacao)
-                .Select((r, index) => new RankingAlunoDTO
+                if (!string.IsNullOrEmpty(busca))
                 {
-                    Posicao = index + 1,
-                    UsuarioId = r.UsuarioId,
-                    NomeCompleto = r.Usuario.FirstName + " " + r.Usuario.LastName,
-                    Avatar = "", // Pode ser implementado posteriormente
-                    Pontos = r.PontosExperiencia,
-                    Quizzes = r.TotalQuizzes,
-                    Media = r.MediaPontuacao,
-                    Sequencia = 0 // Pode ser calculado se necessário
-                })
-                .ToListAsync();
+                    query = query.Where(r => 
+                        r.Usuario.FirstName.Contains(busca) || 
+                        r.Usuario.LastName.Contains(busca));
+                }
 
-            var posicaoUsuarioLogado = rankings
-                .FirstOrDefault(r => r.UsuarioId == usuarioId)?.Posicao ?? 0;
+                var rankingsData = await query
+                    .OrderByDescending(r => r.PontuacaoTotal)
+                    .ThenByDescending(r => r.MediaPontuacao)
+                    .ToListAsync();
 
-            return new RankingCompletoDTO
+                var rankings = rankingsData
+                    .Select((r, index) => new RankingAlunoDTO
+                    {
+                        Posicao = index + 1,
+                        UsuarioId = r.UsuarioId,
+                        NomeCompleto = $"{r.Usuario.FirstName} {r.Usuario.LastName}",
+                        Avatar = "", // Pode ser implementado posteriormente
+                        Pontos = r.PontosExperiencia,
+                        Quizzes = r.TotalQuizzes,
+                        Media = r.MediaPontuacao,
+                        Sequencia = 0 // Pode ser calculado se necessário
+                    })
+                    .ToList();
+
+                var posicaoUsuarioLogado = rankings
+                    .FirstOrDefault(r => r.UsuarioId == usuarioId)?.Posicao ?? 0;
+
+                return new RankingCompletoDTO
+                {
+                    Alunos = rankings,
+                    TotalAlunos = rankings.Count,
+                    PosicaoUsuarioLogado = posicaoUsuarioLogado
+                };
+            }
+            catch (Exception ex)
             {
-                Alunos = rankings,
-                TotalAlunos = rankings.Count,
-                PosicaoUsuarioLogado = posicaoUsuarioLogado
-            };
+                // Log the exception for debugging
+                Console.WriteLine($"Erro no ranking: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                throw;
+            }
         }
 
         // Perfil

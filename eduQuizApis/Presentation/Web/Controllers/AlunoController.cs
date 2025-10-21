@@ -274,9 +274,16 @@ namespace eduQuizApis.Presentation.Web.Controllers
                 var ranking = await _alunoService.ObterRankingCompletoAsync(usuarioId, busca);
                 return Ok(ranking);
             }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
             catch (Exception ex)
             {
-                return StatusCode(500, "Erro interno do servidor");
+                // Log the exception for debugging
+                Console.WriteLine($"Erro no controller de ranking: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                return StatusCode(500, $"Erro interno do servidor: {ex.Message}");
             }
         }
 

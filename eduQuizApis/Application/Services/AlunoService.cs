@@ -492,34 +492,47 @@ namespace eduQuizApis.Application.Services
         {
             try
             {
-                var query = _context.RankingAlunos
+                // Obter dados dos rankings agrupados por usuário
+                var rankingsData = await _context.RankingAlunos
                     .Include(r => r.Usuario)
-                    .Include(r => r.Categoria)
-                    .Where(r => r.Usuario.IsActive && r.Usuario.Role == Domain.Enums.UserRole.Aluno);
-
-                if (!string.IsNullOrEmpty(busca))
-                {
-                    query = query.Where(r => 
-                        r.Usuario.FirstName.Contains(busca) || 
-                        r.Usuario.LastName.Contains(busca));
-                }
-
-                var rankingsData = await query
-                    .OrderByDescending(r => r.PontuacaoTotal)
-                    .ThenByDescending(r => r.MediaPontuacao)
+                    .Where(r => r.Usuario.IsActive && r.Usuario.Role == Domain.Enums.UserRole.Aluno)
                     .ToListAsync();
 
-                var rankings = rankingsData
+                // Aplicar filtro de busca se fornecido
+                if (!string.IsNullOrEmpty(busca))
+                {
+                    rankingsData = rankingsData.Where(r => 
+                        r.Usuario.FirstName.Contains(busca) || 
+                        r.Usuario.LastName.Contains(busca)).ToList();
+                }
+
+                // Agrupar por usuário e somar os pontos
+                var rankingsAgrupados = rankingsData
+                    .GroupBy(r => r.UsuarioId)
+                    .Select(g => new
+                    {
+                        UsuarioId = g.Key,
+                        Usuario = g.First().Usuario,
+                        PontosTotal = g.Sum(r => r.PontosExperiencia),
+                        QuizzesTotal = g.Sum(r => r.TotalQuizzes),
+                        MediaGeral = g.Average(r => r.MediaPontuacao),
+                        Sequencia = 0 // Pode ser calculado se necessário
+                    })
+                    .OrderByDescending(r => r.PontosTotal)
+                    .ThenByDescending(r => r.MediaGeral)
+                    .ToList();
+
+                var rankings = rankingsAgrupados
                     .Select((r, index) => new RankingAlunoDTO
                     {
                         Posicao = index + 1,
                         UsuarioId = r.UsuarioId,
                         NomeCompleto = $"{r.Usuario.FirstName} {r.Usuario.LastName}",
                         Avatar = "", // Pode ser implementado posteriormente
-                        Pontos = r.PontosExperiencia,
-                        Quizzes = r.TotalQuizzes,
-                        Media = r.MediaPontuacao,
-                        Sequencia = 0 // Pode ser calculado se necessário
+                        Pontos = r.PontosTotal,
+                        Quizzes = r.QuizzesTotal,
+                        Media = Math.Round(r.MediaGeral, 2),
+                        Sequencia = r.Sequencia
                     })
                     .ToList();
 

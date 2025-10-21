@@ -24,7 +24,7 @@ namespace eduQuizApis.Application.Services
             try
             {
                 var professor = await _userRepository.GetByIdAsync(professorId);
-                if (professor == null || professor.Role.ToString() != "Professor")
+                if (professor == null || professor.Role != Domain.Enums.UserRole.Professor)
                     throw new ArgumentException("Professor não encontrado");
 
                 // Obter quizzes criados pelo professor
@@ -195,7 +195,7 @@ namespace eduQuizApis.Application.Services
                 
                 Console.WriteLine($"Professor encontrado: {professor.Username}, Role: {professor.Role}");
                 
-                if (professor.Role.ToString() != "Professor")
+                if (professor.Role != Domain.Enums.UserRole.Professor)
                 {
                     Console.WriteLine($"Usuário {professorId} não é professor, Role atual: {professor.Role}");
                     throw new ArgumentException("Usuário não é professor");

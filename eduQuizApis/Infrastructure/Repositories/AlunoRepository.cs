@@ -98,7 +98,7 @@ namespace eduQuizApis.Infrastructure.Repositories
         public async Task<int> ObterTotalUsuariosAtivosAsync()
         {
             return await _context.Usuarios
-                .Where(u => u.IsActive && u.Role.ToString() == "Aluno")
+                .Where(u => u.IsActive && u.Role == Domain.Enums.UserRole.Aluno)
                 .CountAsync();
         }
 

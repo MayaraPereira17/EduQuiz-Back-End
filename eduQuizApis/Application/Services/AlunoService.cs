@@ -47,7 +47,7 @@ namespace eduQuizApis.Application.Services
 
             // Obter total de usuários
             var totalUsuarios = await _context.Usuarios
-                .Where(u => u.Role.ToString() == "Aluno" && u.IsActive)
+                .Where(u => u.Role == Domain.Enums.UserRole.Aluno && u.IsActive)
                 .CountAsync();
 
             // Obter quizzes recentes
@@ -480,7 +480,7 @@ namespace eduQuizApis.Application.Services
                 var query = _context.RankingAlunos
                     .Include(r => r.Usuario)
                     .Include(r => r.Categoria)
-                    .Where(r => r.Usuario.IsActive && r.Usuario.Role.ToString() == "Aluno");
+                    .Where(r => r.Usuario.IsActive && r.Usuario.Role == Domain.Enums.UserRole.Aluno);
 
                 if (!string.IsNullOrEmpty(busca))
                 {

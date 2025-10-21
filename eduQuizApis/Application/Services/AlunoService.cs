@@ -270,7 +270,13 @@ namespace eduQuizApis.Application.Services
                 .FirstOrDefaultAsync();
 
             if (tentativaExistente != null)
-                throw new InvalidOperationException("Já existe uma tentativa em andamento para este quiz");
+            {
+                // Finalizar tentativa anterior automaticamente
+                tentativaExistente.Concluida = true;
+                tentativaExistente.DataConclusao = DateTime.UtcNow;
+                _context.TentativasQuiz.Update(tentativaExistente);
+                await _context.SaveChangesAsync();
+            }
 
             // Criar nova tentativa
             var tentativa = new TentativasQuiz

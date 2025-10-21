@@ -182,10 +182,23 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader();
     });
 
+    // Política específica para Vercel
+    options.AddPolicy("Vercel", policy =>
+    {
+        policy.WithOrigins(
+                "https://front-end-edu-quiz.vercel.app",
+                "https://*.vercel.app"  // Permite qualquer subdomínio do Vercel
+              )
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials();
+    });
+
     // Política para produção - Railway
     options.AddPolicy("Production", policy =>
     {
         policy.WithOrigins(
+                "https://front-end-edu-quiz.vercel.app",  // Frontend em produção
                 "https://eduquiz-back-end-production.up.railway.app",
                 "http://localhost:5173",  // Para testes locais em produção
                 "https://localhost:5173",  // Para testes locais em produção
@@ -238,7 +251,7 @@ if (app.Environment.IsDevelopment())
 }
 else
 {
-    app.UseCors("Production");
+    app.UseCors("Vercel"); // Usa a política específica para Vercel
 }
 
 // Authentication & Authorization

@@ -34,13 +34,13 @@ namespace eduQuizApis.Application.Services
             var mediaGeral = tentativasConcluidas.Any() ? 
                 tentativasConcluidas.Average(t => (t.Pontuacao ?? 0) / (t.PontuacaoMaxima ?? 1) * 100) : 0;
 
-            // Obter posição no ranking
-            var ranking = await _context.RankingAlunos
+            // Obter posição no ranking e somar todos os pontos
+            var rankings = await _context.RankingAlunos
                 .Where(r => r.UsuarioId == usuarioId)
-                .FirstOrDefaultAsync();
+                .ToListAsync();
 
-            var posicaoRanking = ranking?.PosicaoRanking ?? 0;
-            var pontos = ranking?.PontosExperiencia ?? 0;
+            var posicaoRanking = rankings.FirstOrDefault()?.PosicaoRanking ?? 0;
+            var pontos = rankings.Sum(r => r.PontosExperiencia);
 
             // Calcular sequência (dias consecutivos com quiz concluído)
             var sequencia = await CalcularSequenciaAsync(usuarioId);

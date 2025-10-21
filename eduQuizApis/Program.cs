@@ -168,7 +168,13 @@ builder.Services.AddCors(options =>
     // Política para desenvolvimento - permite frontend local
     options.AddPolicy("Development", policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "https://localhost:5173", "http://localhost:5174", "https://localhost:5174")
+        policy.WithOrigins(
+                "http://localhost:5173", 
+                "https://localhost:5173", 
+                "http://localhost:5174", 
+                "https://localhost:5174",
+                "https://front-end-edu-quiz.vercel.app"  // Frontend em produção
+              )
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials(); // Permite cookies e headers de autenticação
@@ -187,7 +193,11 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins(
                 "https://front-end-edu-quiz.vercel.app",
-                "https://*.vercel.app"  // Permite qualquer subdomínio do Vercel
+                "https://*.vercel.app",  // Permite qualquer subdomínio do Vercel
+                "http://localhost:5173",  // Para desenvolvimento local
+                "https://localhost:5173",  // Para desenvolvimento local
+                "http://localhost:5174",  // Para desenvolvimento local
+                "https://localhost:5174"  // Para desenvolvimento local
               )
               .AllowAnyMethod()
               .AllowAnyHeader()

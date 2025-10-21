@@ -78,13 +78,32 @@ namespace eduQuizApis.Application.Services
                     Titulo = q.Titulo,
                     Descricao = q.Descricao ?? "",
                     Categoria = q.Categoria.Nome,
-                    Dificuldade = "Médio", // Pode ser calculado baseado nas questões
+                    Dificuldade = q.Dificuldade,
                     TempoLimite = q.TempoLimite,
                     TotalQuestoes = q.Questoes.Count(quest => quest.Ativo),
                     PontuacaoTotal = q.Questoes.Count(quest => quest.Ativo), // Todas as questões valem 1 ponto
-                    Disponivel = true
+                    Disponivel = true,
+                    QuizConcluido = false, // Será atualizado abaixo
+                    TentativasRestantes = 1 // Sempre 1 para novos quizzes
                 })
                 .ToListAsync();
+
+            // Verificar quais quizzes já foram concluídos pelo usuário
+            var tentativasConcluidas = await _context.TentativasQuiz
+                .Where(t => t.UsuarioId == usuarioId && t.Concluida)
+                .Select(t => t.QuizId)
+                .ToListAsync();
+
+            // Atualizar status dos quizzes
+            foreach (var quiz in quizzes)
+            {
+                if (tentativasConcluidas.Contains(quiz.Id))
+                {
+                    quiz.QuizConcluido = true;
+                    quiz.TentativasRestantes = 0;
+                    quiz.Disponivel = false; // Não pode fazer novamente
+                }
+            }
 
             return quizzes;
         }
@@ -100,11 +119,14 @@ namespace eduQuizApis.Application.Services
             if (quiz == null)
                 throw new ArgumentException("Quiz não encontrado ou não disponível.");
 
-            // Verificar tentativas restantes
-            var tentativasRealizadas = await _context.TentativasQuiz
-                .CountAsync(t => t.UsuarioId == usuarioId && t.QuizId == quizId);
+            // Verificar se o usuário já fez este quiz (limitação de 1 tentativa)
+            var tentativaExistente = await _context.TentativasQuiz
+                .FirstOrDefaultAsync(t => t.UsuarioId == usuarioId && t.QuizId == quizId);
             
-            var tentativasRestantes = quiz.MaxTentativas - tentativasRealizadas;
+            if (tentativaExistente != null)
+                throw new ArgumentException("Você já realizou este quiz. Cada quiz pode ser feito apenas uma vez.");
+            
+            var tentativasRestantes = 1; // Sempre 1 para novos quizzes
 
             return new QuizDetalhesDTO
             {
@@ -150,12 +172,12 @@ namespace eduQuizApis.Application.Services
             if (quiz == null)
                 throw new ArgumentException("Quiz não encontrado ou não disponível.");
 
-            // Verificar se ainda há tentativas disponíveis
-            var tentativasRealizadas = await _context.TentativasQuiz
-                .CountAsync(t => t.UsuarioId == usuarioId && t.QuizId == quizId);
+            // Verificar se o usuário já fez este quiz (limitação de 1 tentativa)
+            var tentativaExistente = await _context.TentativasQuiz
+                .FirstOrDefaultAsync(t => t.UsuarioId == usuarioId && t.QuizId == quizId);
             
-            if (tentativasRealizadas >= quiz.MaxTentativas)
-                throw new InvalidOperationException("Você já excedeu o número máximo de tentativas para este quiz.");
+            if (tentativaExistente != null)
+                throw new InvalidOperationException("Você já realizou este quiz. Cada quiz pode ser feito apenas uma vez.");
 
             // Criar nova tentativa
             var tentativa = new TentativasQuiz
@@ -264,19 +286,12 @@ namespace eduQuizApis.Application.Services
             if (quiz == null)
                 throw new ArgumentException("Quiz não encontrado ou não disponível");
 
-            // Verificar se já existe uma tentativa em andamento
+            // Verificar se o usuário já fez este quiz (limitação de 1 tentativa)
             var tentativaExistente = await _context.TentativasQuiz
-                .Where(t => t.UsuarioId == usuarioId && t.QuizId == request.QuizId && !t.Concluida)
-                .FirstOrDefaultAsync();
-
+                .FirstOrDefaultAsync(t => t.UsuarioId == usuarioId && t.QuizId == request.QuizId);
+            
             if (tentativaExistente != null)
-            {
-                // Finalizar tentativa anterior automaticamente
-                tentativaExistente.Concluida = true;
-                tentativaExistente.DataConclusao = DateTime.UtcNow;
-                _context.TentativasQuiz.Update(tentativaExistente);
-                await _context.SaveChangesAsync();
-            }
+                throw new InvalidOperationException("Você já realizou este quiz. Cada quiz pode ser feito apenas uma vez.");
 
             // Criar nova tentativa
             var tentativa = new TentativasQuiz

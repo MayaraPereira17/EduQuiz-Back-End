@@ -35,6 +35,8 @@ namespace eduQuizApis.Application.DTOs
         public int TotalQuestoes { get; set; }
         public int PontuacaoTotal { get; set; }
         public bool Disponivel { get; set; }
+        public bool QuizConcluido { get; set; } = false;
+        public int TentativasRestantes { get; set; } = 1;
     }
 
     public class IniciarQuizRequestDTO
@@ -128,6 +130,54 @@ namespace eduQuizApis.Application.DTOs
         public List<RankingAlunoDTO> Alunos { get; set; } = new List<RankingAlunoDTO>();
         public int TotalAlunos { get; set; }
         public int PosicaoUsuarioLogado { get; set; }
+    }
+
+    // DTOs para Tentativas
+    public class TentativaQuizDTO
+    {
+        public int Id { get; set; }
+        public int QuizId { get; set; }
+        public string TituloQuiz { get; set; } = string.Empty;
+        public string Categoria { get; set; } = string.Empty;
+        public DateTime DataInicio { get; set; }
+        public DateTime? DataConclusao { get; set; }
+        public bool Concluida { get; set; }
+        public decimal? Pontuacao { get; set; }
+        public decimal? PontuacaoMaxima { get; set; }
+        public decimal? PercentualAcerto { get; set; }
+        public int? TempoGasto { get; set; }
+        public string Status { get; set; } = string.Empty; // "Em Andamento", "Concluído", "Pendente"
+    }
+
+    public class DetalhesTentativaDTO
+    {
+        public int Id { get; set; }
+        public int QuizId { get; set; }
+        public string TituloQuiz { get; set; } = string.Empty;
+        public string Categoria { get; set; } = string.Empty;
+        public DateTime DataInicio { get; set; }
+        public DateTime? DataConclusao { get; set; }
+        public bool Concluida { get; set; }
+        public decimal? Pontuacao { get; set; }
+        public decimal? PontuacaoMaxima { get; set; }
+        public decimal? PercentualAcerto { get; set; }
+        public int? TempoGasto { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public List<RespostaTentativaDTO> Respostas { get; set; } = new List<RespostaTentativaDTO>();
+    }
+
+    public class RespostaTentativaDTO
+    {
+        public int Id { get; set; }
+        public int QuestaoId { get; set; }
+        public string TextoQuestao { get; set; } = string.Empty;
+        public string TipoQuestao { get; set; } = string.Empty;
+        public int? OpcaoSelecionadaId { get; set; }
+        public string? TextoResposta { get; set; }
+        public bool? Correta { get; set; }
+        public decimal PontosGanhos { get; set; }
+        public DateTime DataResposta { get; set; }
+        public List<OpcaoRespostaDTO> Opcoes { get; set; } = new List<OpcaoRespostaDTO>();
     }
 
     // DTOs para Perfil

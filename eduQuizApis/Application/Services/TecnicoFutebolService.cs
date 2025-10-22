@@ -1,7 +1,9 @@
 using eduQuizApis.Application.DTOs;
+using eduQuizApis.Application.Interfaces;
 using eduQuizApis.Domain.Interfaces;
 using eduQuizApis.Infrastructure.Data;
 using eduQuizApis.Domain.Entities;
+using eduQuizApis.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -26,12 +28,12 @@ namespace eduQuizApis.Application.Services
             try
             {
                 var tecnico = await _userRepository.GetByIdAsync(tecnicoId);
-                if (tecnico == null || tecnico.Funcao != "TecnicoFutebol")
+                if (tecnico == null || tecnico.Role != UserRole.TecnicoFutebol)
                     throw new ArgumentException("Técnico não encontrado ou sem permissão");
 
                 // Obter estatísticas dos alunos
                 var totalAlunos = await _context.Usuarios
-                    .Where(u => u.Funcao == "Aluno" && u.Ativo)
+                    .Where(u => u.Role == UserRole.Aluno && u.IsActive)
                     .CountAsync();
 
                 var tentativasConcluidas = await _context.TentativasQuiz
@@ -46,7 +48,7 @@ namespace eduQuizApis.Application.Services
 
                 return new DashboardTecnicoDTO
                 {
-                    NomeTecnico = $"{tecnico.Nome} {tecnico.Sobrenome}",
+                    NomeTecnico = $"{tecnico.FirstName} {tecnico.LastName}",
                     EmailTecnico = tecnico.Email,
                     TotalAlunos = totalAlunos,
                     PerformanceGeral = Math.Round(mediaGeral, 1),
@@ -64,18 +66,19 @@ namespace eduQuizApis.Application.Services
         public async Task<GerenciarAlunosDTO> ObterGerenciarAlunosAsync(int tecnicoId, string? busca = null)
         {
             try
+            {
                 var tecnico = await _userRepository.GetByIdAsync(tecnicoId);
-                if (tecnico == null || tecnico.Funcao != "TecnicoFutebol")
+                if (tecnico == null || tecnico.Role != UserRole.TecnicoFutebol)
                     throw new ArgumentException("Técnico não encontrado ou sem permissão");
 
                 var query = _context.Usuarios
-                    .Where(u => u.Funcao == "Aluno" && u.Ativo);
+                    .Where(u => u.Role == UserRole.Aluno && u.IsActive);
 
                 if (!string.IsNullOrEmpty(busca))
                 {
                     query = query.Where(u => 
-                        u.Nome.Contains(busca) || 
-                        u.Sobrenome.Contains(busca) || 
+                        u.FirstName.Contains(busca) || 
+                        u.LastName.Contains(busca) || 
                         u.Email.Contains(busca));
                 }
 
@@ -83,7 +86,7 @@ namespace eduQuizApis.Application.Services
                     .Select(u => new AlunoRankingDTO
                     {
                         Id = u.Id,
-                        Nome = $"{u.Nome} {u.Sobrenome}",
+                        Nome = $"{u.FirstName} {u.LastName}",
                         Email = u.Email,
                         Idade = CalcularIdade(u.DataNascimento),
                         TotalQuizzes = _context.TentativasQuiz
@@ -126,15 +129,15 @@ namespace eduQuizApis.Application.Services
             try
             {
                 var tecnico = await _userRepository.GetByIdAsync(tecnicoId);
-                if (tecnico == null || tecnico.Funcao != "TecnicoFutebol")
+                if (tecnico == null || tecnico.Role != UserRole.TecnicoFutebol)
                     throw new ArgumentException("Técnico não encontrado ou sem permissão");
 
                 var alunos = await _context.Usuarios
-                    .Where(u => u.Funcao == "Aluno" && u.Ativo)
+                    .Where(u => u.Role == UserRole.Aluno && u.IsActive)
                     .Select(u => new DesempenhoAlunoDTO
                     {
                         Id = u.Id,
-                        Nome = $"{u.Nome} {u.Sobrenome}",
+                        Nome = $"{u.FirstName} {u.LastName}",
                         TotalQuizzes = _context.TentativasQuiz
                             .Where(t => t.UsuarioId == u.Id && t.Concluida)
                             .Count(),
@@ -170,11 +173,11 @@ namespace eduQuizApis.Application.Services
             try
             {
                 var tecnico = await _userRepository.GetByIdAsync(tecnicoId);
-                if (tecnico == null || tecnico.Funcao != "TecnicoFutebol")
+                if (tecnico == null || tecnico.Role != UserRole.TecnicoFutebol)
                     throw new ArgumentException("Técnico não encontrado ou sem permissão");
 
                 var totalAlunos = await _context.Usuarios
-                    .Where(u => u.Funcao == "Aluno" && u.Ativo)
+                    .Where(u => u.Role == UserRole.Aluno && u.IsActive)
                     .CountAsync();
 
                 var mediaTurma = await CalcularMediaTurmaAsync();
@@ -182,10 +185,10 @@ namespace eduQuizApis.Application.Services
                 return new PerfilTecnicoDTO
                 {
                     Id = tecnico.Id,
-                    Nome = tecnico.Nome,
-                    Sobrenome = tecnico.Sobrenome,
+                    Nome = tecnico.FirstName,
+                    Sobrenome = tecnico.LastName,
                     Email = tecnico.Email,
-                    Funcao = tecnico.Funcao,
+                    Funcao = tecnico.Role.ToString(),
                     Instituicao = "Instituição de Ensino", // Pode ser expandido futuramente
                     TotalAlunos = totalAlunos,
                     MediaTurma = Math.Round(mediaTurma, 1)
@@ -203,26 +206,26 @@ namespace eduQuizApis.Application.Services
             try
             {
                 var tecnico = await _userRepository.GetByIdAsync(tecnicoId);
-                if (tecnico == null || tecnico.Funcao != "TecnicoFutebol")
+                if (tecnico == null || tecnico.Role != UserRole.TecnicoFutebol)
                     throw new ArgumentException("Técnico não encontrado ou sem permissão");
 
-                tecnico.Nome = request.Nome;
-                tecnico.Sobrenome = request.Sobrenome;
+                tecnico.FirstName = request.Nome;
+                tecnico.LastName = request.Sobrenome;
                 tecnico.Email = request.Email;
-                tecnico.DataAtualizacao = DateTime.UtcNow;
+                tecnico.UpdatedAt = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync();
 
                 return new PerfilTecnicoDTO
                 {
                     Id = tecnico.Id,
-                    Nome = tecnico.Nome,
-                    Sobrenome = tecnico.Sobrenome,
+                    Nome = tecnico.FirstName,
+                    Sobrenome = tecnico.LastName,
                     Email = tecnico.Email,
-                    Funcao = tecnico.Funcao,
+                    Funcao = tecnico.Role.ToString(),
                     Instituicao = "Instituição de Ensino",
                     TotalAlunos = await _context.Usuarios
-                        .Where(u => u.Funcao == "Aluno" && u.Ativo)
+                        .Where(u => u.Role == UserRole.Aluno && u.IsActive)
                         .CountAsync(),
                     MediaTurma = await CalcularMediaTurmaAsync()
                 };
@@ -259,7 +262,7 @@ namespace eduQuizApis.Application.Services
             return melhoresAlunos.Select((aluno, index) => new MelhorAlunoDTO
             {
                 Posicao = index + 1,
-                Nome = $"{aluno.Usuario.Nome} {aluno.Usuario.Sobrenome}",
+                Nome = $"{aluno.Usuario.FirstName} {aluno.Usuario.LastName}",
                 Sequencia = aluno.Sequencia,
                 Performance = Math.Round(aluno.MediaPontuacao, 1),
                 TotalQuizzes = aluno.TotalQuizzes

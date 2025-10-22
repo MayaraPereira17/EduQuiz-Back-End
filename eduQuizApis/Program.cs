@@ -151,6 +151,7 @@ builder.Services.AddScoped<RegisterUseCase>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IAlunoService, AlunoService>();
 builder.Services.AddScoped<IProfessorService, ProfessorService>();
+builder.Services.AddScoped<ITecnicoFutebolService, TecnicoFutebolService>();
 
 // ===== DEPENDENCY INJECTION - INFRASTRUCTURE LAYER =====
 // Repositories

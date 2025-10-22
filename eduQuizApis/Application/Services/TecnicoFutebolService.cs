@@ -47,8 +47,24 @@ namespace eduQuizApis.Application.Services
                     .Where(t => t.Concluida)
                     .ToListAsync();
 
-                var mediaGeral = tentativasConcluidas.Any() ? 
-                    tentativasConcluidas.Average(t => (t.Pontuacao ?? 0) / (t.PontuacaoMaxima ?? 1) * 100) : 0;
+                var mediaGeral = 0.0m;
+                if (tentativasConcluidas.Any())
+                {
+                    try
+                    {
+                        mediaGeral = tentativasConcluidas.Average(t => 
+                        {
+                            if (t.Pontuacao.HasValue && t.PontuacaoMaxima.HasValue && t.PontuacaoMaxima.Value > 0)
+                                return (decimal)t.Pontuacao.Value / t.PontuacaoMaxima.Value * 100;
+                            return 0;
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Erro ao calcular média geral, usando 0");
+                        mediaGeral = 0;
+                    }
+                }
 
                 // Obter melhores alunos do mês
                 var melhoresAlunos = await ObterMelhoresAlunosDoMesAsync();
@@ -90,27 +106,38 @@ namespace eduQuizApis.Application.Services
                         u.Email.Contains(busca));
                 }
 
-                var alunos = await query
-                    .Select(u => new AlunoRankingDTO
+                // Simplificar consulta para evitar problemas com subconsultas
+                var usuarios = await query.ToListAsync();
+                var alunos = new List<AlunoRankingDTO>();
+
+                foreach (var usuario in usuarios)
+                {
+                    var tentativas = await context.TentativasQuiz
+                        .Where(t => t.UsuarioId == usuario.Id && t.Concluida)
+                        .ToListAsync();
+
+                    var totalQuizzes = tentativas.Count;
+                    var scoreGeral = tentativas.Any() ? 
+                        tentativas.Average(t => (t.Pontuacao ?? 0) / (t.PontuacaoMaxima ?? 1) * 100) : 0;
+                    
+                    var ultimoQuiz = tentativas
+                        .OrderByDescending(t => t.DataConclusao)
+                        .FirstOrDefault()?.DataConclusao;
+
+                    alunos.Add(new AlunoRankingDTO
                     {
-                        Id = u.Id,
-                        Nome = $"{u.FirstName} {u.LastName}",
-                        Email = u.Email,
-                        Idade = CalcularIdade(u.DataNascimento),
-                        TotalQuizzes = context.TentativasQuiz
-                            .Where(t => t.UsuarioId == u.Id && t.Concluida)
-                            .Count(),
-                        ScoreGeral = context.TentativasQuiz
-                            .Where(t => t.UsuarioId == u.Id && t.Concluida)
-                            .Average(t => (t.Pontuacao ?? 0) / (t.PontuacaoMaxima ?? 1) * 100),
-                        UltimoQuiz = context.TentativasQuiz
-                            .Where(t => t.UsuarioId == u.Id && t.Concluida)
-                            .OrderByDescending(t => t.DataConclusao)
-                            .Select(t => t.DataConclusao)
-                            .FirstOrDefault()
-                    })
-                    .OrderByDescending(a => a.ScoreGeral)
-                    .ToListAsync();
+                        Id = usuario.Id,
+                        Nome = $"{usuario.FirstName} {usuario.LastName}",
+                        Email = usuario.Email,
+                        Idade = CalcularIdade(usuario.DataNascimento),
+                        TotalQuizzes = totalQuizzes,
+                        ScoreGeral = Math.Round(scoreGeral, 1),
+                        UltimoQuiz = ultimoQuiz
+                    });
+                }
+
+                // Ordenar por score geral
+                alunos = alunos.OrderByDescending(a => a.ScoreGeral).ToList();
 
                 // Adicionar posição no ranking
                 for (int i = 0; i < alunos.Count; i++)
@@ -141,26 +168,38 @@ namespace eduQuizApis.Application.Services
                     throw new ArgumentException("Técnico não encontrado ou sem permissão");
 
                 var context = GetContext();
-                var alunos = await context.Usuarios
+                var usuarios = await context.Usuarios
                     .Where(u => u.Role == UserRole.Aluno && u.IsActive)
-                    .Select(u => new DesempenhoAlunoDTO
-                    {
-                        Id = u.Id,
-                        Nome = $"{u.FirstName} {u.LastName}",
-                        TotalQuizzes = context.TentativasQuiz
-                            .Where(t => t.UsuarioId == u.Id && t.Concluida)
-                            .Count(),
-                        UltimoQuiz = context.TentativasQuiz
-                            .Where(t => t.UsuarioId == u.Id && t.Concluida)
-                            .OrderByDescending(t => t.DataConclusao)
-                            .Select(t => t.DataConclusao)
-                            .FirstOrDefault(),
-                        ScoreGeral = context.TentativasQuiz
-                            .Where(t => t.UsuarioId == u.Id && t.Concluida)
-                            .Average(t => (t.Pontuacao ?? 0) / (t.PontuacaoMaxima ?? 1) * 100)
-                    })
-                    .OrderByDescending(a => a.ScoreGeral)
                     .ToListAsync();
+
+                var alunos = new List<DesempenhoAlunoDTO>();
+
+                foreach (var usuario in usuarios)
+                {
+                    var tentativas = await context.TentativasQuiz
+                        .Where(t => t.UsuarioId == usuario.Id && t.Concluida)
+                        .ToListAsync();
+
+                    var totalQuizzes = tentativas.Count;
+                    var scoreGeral = tentativas.Any() ? 
+                        tentativas.Average(t => (t.Pontuacao ?? 0) / (t.PontuacaoMaxima ?? 1) * 100) : 0;
+                    
+                    var ultimoQuiz = tentativas
+                        .OrderByDescending(t => t.DataConclusao)
+                        .FirstOrDefault()?.DataConclusao;
+
+                    alunos.Add(new DesempenhoAlunoDTO
+                    {
+                        Id = usuario.Id,
+                        Nome = $"{usuario.FirstName} {usuario.LastName}",
+                        TotalQuizzes = totalQuizzes,
+                        UltimoQuiz = ultimoQuiz,
+                        ScoreGeral = Math.Round(scoreGeral, 1)
+                    });
+                }
+
+                // Ordenar por score geral
+                alunos = alunos.OrderByDescending(a => a.ScoreGeral).ToList();
 
                 return new RelatorioDesempenhoDTO
                 {
@@ -251,34 +290,63 @@ namespace eduQuizApis.Application.Services
         // Métodos auxiliares
         private async Task<List<MelhorAlunoDTO>> ObterMelhoresAlunosDoMesAsync()
         {
-            var context = GetContext();
-            var inicioMes = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
-            var fimMes = inicioMes.AddMonths(1);
-
-            var melhoresAlunos = await context.TentativasQuiz
-                .Where(t => t.Concluida && t.DataConclusao >= inicioMes && t.DataConclusao < fimMes)
-                .GroupBy(t => t.UsuarioId)
-                .Select(g => new
-                {
-                    UsuarioId = g.Key,
-                    Usuario = g.First().Usuario,
-                    TotalQuizzes = g.Count(),
-                    MediaPontuacao = g.Average(t => (t.Pontuacao ?? 0) / (t.PontuacaoMaxima ?? 1) * 100),
-                    Sequencia = CalcularSequencia(g.Key)
-                })
-                .OrderByDescending(x => x.MediaPontuacao)
-                .ThenByDescending(x => x.TotalQuizzes)
-                .Take(3)
-                .ToListAsync();
-
-            return melhoresAlunos.Select((aluno, index) => new MelhorAlunoDTO
+            try
             {
-                Posicao = index + 1,
-                Nome = $"{aluno.Usuario.FirstName} {aluno.Usuario.LastName}",
-                Sequencia = aluno.Sequencia,
-                Performance = Math.Round(aluno.MediaPontuacao, 1),
-                TotalQuizzes = aluno.TotalQuizzes
-            }).ToList();
+                var context = GetContext();
+                var inicioMes = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+                var fimMes = inicioMes.AddMonths(1);
+
+                // Simplificar a consulta para evitar problemas de relacionamentos
+                var tentativasDoMes = await context.TentativasQuiz
+                    .Where(t => t.Concluida && t.DataConclusao >= inicioMes && t.DataConclusao < fimMes)
+                    .ToListAsync();
+
+                if (!tentativasDoMes.Any())
+                {
+                    return new List<MelhorAlunoDTO>();
+                }
+
+                var alunosAgrupados = tentativasDoMes
+                    .GroupBy(t => t.UsuarioId)
+                    .Select(g => new
+                    {
+                        UsuarioId = g.Key,
+                        TotalQuizzes = g.Count(),
+                        MediaPontuacao = g.Average(t => (t.Pontuacao ?? 0) / (t.PontuacaoMaxima ?? 1) * 100)
+                    })
+                    .OrderByDescending(x => x.MediaPontuacao)
+                    .ThenByDescending(x => x.TotalQuizzes)
+                    .Take(3)
+                    .ToList();
+
+                var melhoresAlunos = new List<MelhorAlunoDTO>();
+                for (int i = 0; i < alunosAgrupados.Count; i++)
+                {
+                    var aluno = alunosAgrupados[i];
+                    var usuario = await context.Usuarios
+                        .Where(u => u.Id == aluno.UsuarioId)
+                        .FirstOrDefaultAsync();
+
+                    if (usuario != null)
+                    {
+                        melhoresAlunos.Add(new MelhorAlunoDTO
+                        {
+                            Posicao = i + 1,
+                            Nome = $"{usuario.FirstName} {usuario.LastName}",
+                            Sequencia = CalcularSequencia(aluno.UsuarioId),
+                            Performance = Math.Round(aluno.MediaPontuacao, 1),
+                            TotalQuizzes = aluno.TotalQuizzes
+                        });
+                    }
+                }
+
+                return melhoresAlunos;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao obter melhores alunos do mês");
+                return new List<MelhorAlunoDTO>();
+            }
         }
 
         private async Task<decimal> CalcularMediaTurmaAsync()

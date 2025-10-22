@@ -4,6 +4,7 @@ using eduQuizApis.Domain.Interfaces;
 using eduQuizApis.Infrastructure.Data;
 using eduQuizApis.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace eduQuizApis.Application.Services
 {
@@ -11,11 +12,13 @@ namespace eduQuizApis.Application.Services
     {
         private readonly IUserRepository _userRepository;
         private readonly EduQuizContext _context;
+        private readonly ILogger<AlunoService> _logger;
 
-        public AlunoService(IUserRepository userRepository, EduQuizContext context)
+        public AlunoService(IUserRepository userRepository, EduQuizContext context, ILogger<AlunoService> logger)
         {
             _userRepository = userRepository;
             _context = context;
+            _logger = logger;
         }
 
         // Dashboard
@@ -164,7 +167,7 @@ namespace eduQuizApis.Application.Services
 
         public async Task<ResponderQuizResponseDTO> ResponderQuizAsync(int usuarioId, int quizId, ResponderQuizRequestDTO request)
         {
-            Console.WriteLine($"🔍 DEBUG: ResponderQuizAsync - UsuarioId: {usuarioId}, QuizId: {quizId}");
+            _logger.LogInformation($"🔍 DEBUG: ResponderQuizAsync - UsuarioId: {usuarioId}, QuizId: {quizId}");
             
             var quiz = await _context.Quizzes
                 .Include(q => q.Questoes.Where(quest => quest.Ativo).OrderBy(quest => quest.OrdemIndice))
@@ -245,7 +248,7 @@ namespace eduQuizApis.Application.Services
 
             // Atualizar tentativa com pontuação final
             tentativa.Pontuacao = pontuacaoTotal;
-            Console.WriteLine($"🔍 DEBUG: Pontuação calculada - Total: {pontuacaoTotal}, Corretas: {respostasCorretas}, Incorretas: {respostasIncorretas}");
+            _logger.LogInformation($"🔍 DEBUG: Pontuação calculada - Total: {pontuacaoTotal}, Corretas: {respostasCorretas}, Incorretas: {respostasIncorretas}");
             _context.TentativasQuiz.Update(tentativa);
             await _context.SaveChangesAsync();
 

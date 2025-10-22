@@ -164,6 +164,8 @@ namespace eduQuizApis.Application.Services
 
         public async Task<ResponderQuizResponseDTO> ResponderQuizAsync(int usuarioId, int quizId, ResponderQuizRequestDTO request)
         {
+            Console.WriteLine($"🔍 DEBUG: ResponderQuizAsync - UsuarioId: {usuarioId}, QuizId: {quizId}");
+            
             var quiz = await _context.Quizzes
                 .Include(q => q.Questoes.Where(quest => quest.Ativo).OrderBy(quest => quest.OrdemIndice))
                 .ThenInclude(quest => quest.Opcoes.OrderBy(op => op.OrdemIndice))
@@ -186,7 +188,7 @@ namespace eduQuizApis.Application.Services
             tentativa.Concluida = true;
             tentativa.DataConclusao = DateTime.UtcNow;
             tentativa.Pontuacao = 0;
-            tentativa.PontuacaoMaxima = quiz.Questoes.Sum(q => q.Pontos);
+            tentativa.PontuacaoMaxima = quiz.Questoes.Count; // Cada questão vale 1 ponto
 
             // Processar respostas
             var respostas = new List<RespostaResultadoDTO>();
@@ -203,7 +205,7 @@ namespace eduQuizApis.Application.Services
                 var opcaoSelecionada = questao.Opcoes.FirstOrDefault(o => o.Id == resposta.OpcaoSelecionadaId);
                 
                 var correta = opcaoSelecionada?.Correta ?? false;
-                var pontosObtidos = correta ? questao.Pontos : 0;
+                var pontosObtidos = correta ? 1 : 0; // Cada questão vale 1 ponto
                 
                 if (correta)
                 {
@@ -243,6 +245,7 @@ namespace eduQuizApis.Application.Services
 
             // Atualizar tentativa com pontuação final
             tentativa.Pontuacao = pontuacaoTotal;
+            Console.WriteLine($"🔍 DEBUG: Pontuação calculada - Total: {pontuacaoTotal}, Corretas: {respostasCorretas}, Incorretas: {respostasIncorretas}");
             _context.TentativasQuiz.Update(tentativa);
             await _context.SaveChangesAsync();
 
@@ -379,7 +382,7 @@ namespace eduQuizApis.Application.Services
             }
 
             if (respostaCorreta)
-                pontosGanhos = questao.Pontos; // Sempre 1 ponto conforme regra
+                pontosGanhos = 1; // Sempre 1 ponto conforme regra
 
             // Criar resposta
             var resposta = new Respostas

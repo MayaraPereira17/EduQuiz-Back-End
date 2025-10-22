@@ -172,27 +172,21 @@ namespace eduQuizApis.Application.Services
             if (quiz == null)
                 throw new ArgumentException("Quiz não encontrado ou não disponível.");
 
-            // Verificar se o usuário já fez este quiz (limitação de 1 tentativa)
-            var tentativaExistente = await _context.TentativasQuiz
+            // Buscar tentativa existente (deve ter sido criada em IniciarQuizAsync)
+            var tentativa = await _context.TentativasQuiz
                 .FirstOrDefaultAsync(t => t.UsuarioId == usuarioId && t.QuizId == quizId);
             
-            if (tentativaExistente != null)
-                throw new InvalidOperationException("Você já realizou este quiz. Cada quiz pode ser feito apenas uma vez.");
+            if (tentativa == null)
+                throw new InvalidOperationException("Tentativa não encontrada. Inicie o quiz primeiro.");
 
-            // Criar nova tentativa
-            var tentativa = new TentativasQuiz
-            {
-                UsuarioId = usuarioId,
-                QuizId = quizId,
-                DataInicio = DateTime.UtcNow,
-                Concluida = true,
-                DataConclusao = DateTime.UtcNow,
-                Pontuacao = 0,
-                PontuacaoMaxima = quiz.Questoes.Sum(q => q.Pontos)
-            };
+            if (tentativa.Concluida)
+                throw new InvalidOperationException("Este quiz já foi concluído.");
 
-            _context.TentativasQuiz.Add(tentativa);
-            await _context.SaveChangesAsync();
+            // Atualizar tentativa existente
+            tentativa.Concluida = true;
+            tentativa.DataConclusao = DateTime.UtcNow;
+            tentativa.Pontuacao = 0;
+            tentativa.PontuacaoMaxima = quiz.Questoes.Sum(q => q.Pontos);
 
             // Processar respostas
             var respostas = new List<RespostaResultadoDTO>();

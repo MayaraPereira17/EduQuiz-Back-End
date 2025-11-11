@@ -294,5 +294,152 @@ namespace eduQuizApis.Presentation.Web.Controllers
                 return StatusCode(500, new { message = "Erro ao excluir professor. Tente novamente mais tarde." });
             }
         }
+
+        /// <summary>
+        /// Lista todos os times criados pelo técnico
+        /// </summary>
+        /// <returns>Lista de times com seus jogadores</returns>
+        [HttpGet("times")]
+        public async Task<ActionResult<GerenciarTimesDTO>> ObterTimes()
+        {
+            try
+            {
+                var tecnicoId = ObterUsuarioId();
+                var times = await _tecnicoService.ObterTimesAsync(tecnicoId);
+                return Ok(times);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Unauthorized(new { message = "Token inválido ou expirado" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Erro ao obter lista de times. Tente novamente mais tarde." });
+            }
+        }
+
+        /// <summary>
+        /// Cria um novo time com os jogadores especificados
+        /// </summary>
+        /// <param name="request">Dados do time (nome e IDs dos jogadores)</param>
+        /// <returns>Time criado com seus jogadores</returns>
+        [HttpPost("times")]
+        public async Task<ActionResult<TimeDTO>> CriarTime([FromBody] CriarTimeRequestDTO request)
+        {
+            try
+            {
+                var tecnicoId = ObterUsuarioId();
+                var time = await _tecnicoService.CriarTimeAsync(tecnicoId, request);
+                return Ok(time);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Unauthorized(new { message = "Token inválido ou expirado" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Erro ao criar time. Tente novamente mais tarde." });
+            }
+        }
+
+        /// <summary>
+        /// Adiciona um jogador a um time existente
+        /// </summary>
+        /// <param name="timeId">ID do time</param>
+        /// <param name="request">Dados do jogador (alunoId)</param>
+        /// <returns>Time atualizado com o novo jogador</returns>
+        [HttpPost("times/{timeId}/jogadores")]
+        public async Task<ActionResult<TimeDTO>> AdicionarJogadorAoTime(int timeId, [FromBody] AdicionarJogadorRequestDTO request)
+        {
+            try
+            {
+                var tecnicoId = ObterUsuarioId();
+                var time = await _tecnicoService.AdicionarJogadorAoTimeAsync(tecnicoId, timeId, request);
+                return Ok(time);
+            }
+            catch (ArgumentException ex)
+            {
+                if (ex.Message.Contains("não encontrado"))
+                    return NotFound(new { message = ex.Message });
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Unauthorized(new { message = "Token inválido ou expirado" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Erro ao adicionar jogador ao time. Tente novamente mais tarde." });
+            }
+        }
+
+        /// <summary>
+        /// Remove um jogador de um time
+        /// </summary>
+        /// <param name="timeId">ID do time</param>
+        /// <param name="jogadorId">ID do jogador no time</param>
+        /// <returns>Mensagem de sucesso</returns>
+        [HttpDelete("times/{timeId}/jogadores/{jogadorId}")]
+        public async Task<ActionResult<RemoverJogadorResponseDTO>> RemoverJogadorDoTime(int timeId, int jogadorId)
+        {
+            try
+            {
+                var tecnicoId = ObterUsuarioId();
+                var resultado = await _tecnicoService.RemoverJogadorDoTimeAsync(tecnicoId, timeId, jogadorId);
+                return Ok(resultado);
+            }
+            catch (ArgumentException ex)
+            {
+                if (ex.Message.Contains("não encontrado"))
+                    return NotFound(new { message = ex.Message });
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Unauthorized(new { message = "Token inválido ou expirado" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Erro ao remover jogador do time. Tente novamente mais tarde." });
+            }
+        }
+
+        /// <summary>
+        /// Deleta um time (soft delete)
+        /// </summary>
+        /// <param name="timeId">ID do time</param>
+        /// <returns>Mensagem de sucesso</returns>
+        [HttpDelete("times/{timeId}")]
+        public async Task<ActionResult<DeletarTimeResponseDTO>> DeletarTime(int timeId)
+        {
+            try
+            {
+                var tecnicoId = ObterUsuarioId();
+                var resultado = await _tecnicoService.DeletarTimeAsync(tecnicoId, timeId);
+                return Ok(resultado);
+            }
+            catch (ArgumentException ex)
+            {
+                if (ex.Message.Contains("não encontrado"))
+                    return NotFound(new { message = ex.Message });
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Unauthorized(new { message = "Token inválido ou expirado" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Erro ao deletar time. Tente novamente mais tarde." });
+            }
+        }
     }
 }

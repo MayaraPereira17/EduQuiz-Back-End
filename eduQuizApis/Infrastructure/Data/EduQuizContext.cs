@@ -27,6 +27,8 @@ namespace eduQuizApis.Infrastructure.Data
         public DbSet<RankingAlunos> RankingAlunos { get; set; }
         public DbSet<Conquistas> Conquistas { get; set; }
         public DbSet<ConquistasAlunos> ConquistasAlunos { get; set; }
+        public DbSet<Time> Times { get; set; }
+        public DbSet<JogadorTime> JogadoresTime { get; set; }
 
         /// <summary>
         /// Configuração do modelo de dados
@@ -277,6 +279,56 @@ namespace eduQuizApis.Infrastructure.Data
                 entity.HasKey(e => e.Id);
                 entity.Ignore(e => e.CreatedAt);
                 entity.Ignore(e => e.UpdatedAt);
+            });
+
+            // Configurações para Time
+            modelBuilder.Entity<Time>(entity =>
+            {
+                entity.ToTable("Times");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("Id").ValueGeneratedOnAdd();
+                entity.Property(e => e.Nome).HasColumnName("Nome").IsRequired().HasMaxLength(100);
+                entity.Property(e => e.TecnicoId).HasColumnName("TecnicoId").IsRequired();
+                entity.Property(e => e.DataCriacao).HasColumnName("DataCriacao").HasDefaultValueSql("CURRENT_TIMESTAMP");
+                entity.Property(e => e.IsActive).HasColumnName("IsActive").HasDefaultValue(true);
+                
+                entity.Ignore(e => e.CreatedAt);
+                entity.Ignore(e => e.UpdatedAt);
+
+                // Relacionamentos
+                entity.HasOne(t => t.Tecnico)
+                    .WithMany()
+                    .HasForeignKey(t => t.TecnicoId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // Configurações para JogadorTime
+            modelBuilder.Entity<JogadorTime>(entity =>
+            {
+                entity.ToTable("JogadoresTime");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("Id").ValueGeneratedOnAdd();
+                entity.Property(e => e.TimeId).HasColumnName("TimeId").IsRequired();
+                entity.Property(e => e.AlunoId).HasColumnName("AlunoId").IsRequired();
+                entity.Property(e => e.DataEscalacao).HasColumnName("DataEscalacao").HasDefaultValueSql("CURRENT_TIMESTAMP");
+                
+                entity.Ignore(e => e.CreatedAt);
+                entity.Ignore(e => e.UpdatedAt);
+
+                // Relacionamentos
+                entity.HasOne(j => j.Time)
+                    .WithMany(t => t.Jogadores)
+                    .HasForeignKey(j => j.TimeId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(j => j.Aluno)
+                    .WithMany()
+                    .HasForeignKey(j => j.AlunoId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Índice único para evitar duplicatas (um aluno pode estar em múltiplos times)
+                // Se quiser permitir apenas um time por aluno, descomentar a linha abaixo:
+                // entity.HasIndex(e => e.AlunoId).IsUnique();
             });
 
             // Seed Data - Usuário técnico padrão

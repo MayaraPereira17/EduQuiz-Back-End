@@ -139,4 +139,55 @@ namespace eduQuizApis.Application.DTOs
         public string Message { get; set; } = string.Empty;
         public int ProfessorId { get; set; }
     }
+
+    // Gerenciar Times
+    public class GerenciarTimesDTO
+    {
+        public List<TimeDTO> Times { get; set; } = new List<TimeDTO>();
+        public int TotalTimes { get; set; }
+    }
+
+    public class TimeDTO
+    {
+        public int Id { get; set; }
+        public string Nome { get; set; } = string.Empty;
+        public DateTime DataCriacao { get; set; }
+        public List<JogadorTimeDTO> Jogadores { get; set; } = new List<JogadorTimeDTO>();
+    }
+
+    public class JogadorTimeDTO
+    {
+        public int Id { get; set; }
+        public int AlunoId { get; set; }
+        public string Nome { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public int Posicao { get; set; }
+        public decimal ScoreGeral { get; set; }
+    }
+
+    // Criar Time
+    public class CriarTimeRequestDTO
+    {
+        public string Nome { get; set; } = string.Empty;
+        public List<int> JogadoresIds { get; set; } = new List<int>();
+    }
+
+    // Adicionar Jogador ao Time
+    public class AdicionarJogadorRequestDTO
+    {
+        public int AlunoId { get; set; }
+    }
+
+    // Remover Jogador do Time
+    public class RemoverJogadorResponseDTO
+    {
+        public string Message { get; set; } = string.Empty;
+    }
+
+    // Deletar Time
+    public class DeletarTimeResponseDTO
+    {
+        public string Message { get; set; } = string.Empty;
+        public int TimeId { get; set; }
+    }
 }

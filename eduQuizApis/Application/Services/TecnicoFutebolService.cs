@@ -883,5 +883,410 @@ namespace eduQuizApis.Application.Services
                 throw new Exception("Erro ao excluir professor. Tente novamente mais tarde.");
             }
         }
+
+        // Gerenciar Times
+
+        // Listar Times
+        public async Task<GerenciarTimesDTO> ObterTimesAsync(int tecnicoId)
+        {
+            try
+            {
+                var tecnico = await _userRepository.GetByIdAsync(tecnicoId);
+                if (tecnico == null || tecnico.Role != UserRole.TecnicoFutebol)
+                    throw new ArgumentException("Técnico não encontrado ou sem permissão");
+
+                var context = GetContext();
+                var times = await context.Times
+                    .Include(t => t.Jogadores)
+                    .ThenInclude(j => j.Aluno)
+                    .Where(t => t.TecnicoId == tecnicoId && t.IsActive)
+                    .OrderByDescending(t => t.DataCriacao)
+                    .ToListAsync();
+
+                // Otimização: calcular scores de todos os alunos de uma vez
+                var todosAlunos = await context.Usuarios
+                    .Where(u => u.Role == UserRole.Aluno && u.IsActive)
+                    .ToListAsync();
+
+                var todasTentativas = await context.TentativasQuiz
+                    .Where(t => t.Concluida)
+                    .ToListAsync();
+
+                // Criar dicionário de scores por aluno
+                var scoresPorAluno = todasTentativas
+                    .GroupBy(t => t.UsuarioId)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => g.Average(t => (t.Pontuacao ?? 0) / (t.PontuacaoMaxima ?? 1) * 100)
+                    );
+
+                // Calcular posições no ranking
+                var alunosComScore = todosAlunos
+                    .Select(u => new
+                    {
+                        Id = u.Id,
+                        Score = scoresPorAluno.ContainsKey(u.Id) ? scoresPorAluno[u.Id] : 0
+                    })
+                    .OrderByDescending(a => a.Score)
+                    .ToList();
+
+                var posicoesPorAluno = alunosComScore
+                    .Select((a, index) => new { a.Id, Posicao = index + 1 })
+                    .ToDictionary(a => a.Id, a => a.Posicao);
+
+                var timesDTO = new List<TimeDTO>();
+
+                foreach (var time in times)
+                {
+                    var jogadoresDTO = new List<JogadorTimeDTO>();
+                    
+                    foreach (var jogador in time.Jogadores.OrderBy(j => j.DataEscalacao))
+                    {
+                        var aluno = jogador.Aluno;
+                        var scoreGeral = scoresPorAluno.ContainsKey(aluno.Id) ? scoresPorAluno[aluno.Id] : 0;
+                        var posicao = posicoesPorAluno.ContainsKey(aluno.Id) ? posicoesPorAluno[aluno.Id] : 0;
+
+                        jogadoresDTO.Add(new JogadorTimeDTO
+                        {
+                            Id = jogador.Id,
+                            AlunoId = aluno.Id,
+                            Nome = $"{aluno.FirstName} {aluno.LastName}".Trim(),
+                            Email = aluno.Email,
+                            Posicao = posicao,
+                            ScoreGeral = Math.Round(scoreGeral, 1)
+                        });
+                    }
+
+                    timesDTO.Add(new TimeDTO
+                    {
+                        Id = time.Id,
+                        Nome = time.Nome,
+                        DataCriacao = time.DataCriacao,
+                        Jogadores = jogadoresDTO
+                    });
+                }
+
+                return new GerenciarTimesDTO
+                {
+                    Times = timesDTO,
+                    TotalTimes = timesDTO.Count
+                };
+            }
+            catch (ArgumentException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao obter times");
+                throw new Exception("Erro ao obter times. Tente novamente mais tarde.");
+            }
+        }
+
+        // Criar Time
+        public async Task<TimeDTO> CriarTimeAsync(int tecnicoId, CriarTimeRequestDTO request)
+        {
+            try
+            {
+                var tecnico = await _userRepository.GetByIdAsync(tecnicoId);
+                if (tecnico == null || tecnico.Role != UserRole.TecnicoFutebol)
+                    throw new ArgumentException("Técnico não encontrado ou sem permissão");
+
+                // Validações
+                if (string.IsNullOrWhiteSpace(request.Nome))
+                    throw new ArgumentException("Nome do time é obrigatório");
+
+                if (request.JogadoresIds == null || request.JogadoresIds.Count == 0)
+                    throw new ArgumentException("É necessário adicionar pelo menos um jogador");
+
+                var context = GetContext();
+
+                // Validar se os alunos existem e estão ativos
+                var alunos = await context.Usuarios
+                    .Where(u => request.JogadoresIds.Contains(u.Id) && 
+                               u.Role == UserRole.Aluno && 
+                               u.IsActive)
+                    .ToListAsync();
+
+                if (alunos.Count != request.JogadoresIds.Count)
+                    throw new ArgumentException("Um ou mais alunos não foram encontrados ou estão inativos");
+
+                // Criar time
+                var time = new Time
+                {
+                    Nome = request.Nome.Trim(),
+                    TecnicoId = tecnicoId,
+                    DataCriacao = DateTime.UtcNow,
+                    IsActive = true
+                };
+
+                context.Times.Add(time);
+                await context.SaveChangesAsync();
+
+                // Adicionar jogadores ao time
+                foreach (var alunoId in request.JogadoresIds)
+                {
+                    // Verificar se jogador já está no time (evitar duplicatas)
+                    var jaEstaNoTime = await context.JogadoresTime
+                        .AnyAsync(j => j.TimeId == time.Id && j.AlunoId == alunoId);
+
+                    if (!jaEstaNoTime)
+                    {
+                        var jogadorTime = new JogadorTime
+                        {
+                            TimeId = time.Id,
+                            AlunoId = alunoId,
+                            DataEscalacao = DateTime.UtcNow
+                        };
+
+                        context.JogadoresTime.Add(jogadorTime);
+                    }
+                }
+
+                await context.SaveChangesAsync();
+
+                _logger.LogInformation("Time {TimeId} criado pelo técnico {TecnicoId} com {QuantidadeJogadores} jogadores", 
+                    time.Id, tecnicoId, request.JogadoresIds.Count);
+
+                // Retornar time criado
+                return await ObterTimePorIdAsync(context, time.Id);
+            }
+            catch (ArgumentException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao criar time");
+                throw new Exception("Erro ao criar time. Tente novamente mais tarde.");
+            }
+        }
+
+        // Adicionar Jogador ao Time
+        public async Task<TimeDTO> AdicionarJogadorAoTimeAsync(int tecnicoId, int timeId, AdicionarJogadorRequestDTO request)
+        {
+            try
+            {
+                var tecnico = await _userRepository.GetByIdAsync(tecnicoId);
+                if (tecnico == null || tecnico.Role != UserRole.TecnicoFutebol)
+                    throw new ArgumentException("Técnico não encontrado ou sem permissão");
+
+                var context = GetContext();
+
+                // Validar se time existe e pertence ao técnico
+                var time = await context.Times
+                    .FirstOrDefaultAsync(t => t.Id == timeId && t.TecnicoId == tecnicoId && t.IsActive);
+
+                if (time == null)
+                    throw new ArgumentException("Time não encontrado");
+
+                // Validar se aluno existe e está ativo
+                var aluno = await context.Usuarios
+                    .FirstOrDefaultAsync(u => u.Id == request.AlunoId && 
+                                            u.Role == UserRole.Aluno && 
+                                            u.IsActive);
+
+                if (aluno == null)
+                    throw new ArgumentException("Aluno não encontrado ou está inativo");
+
+                // Verificar se aluno já está no time
+                var jaEstaNoTime = await context.JogadoresTime
+                    .AnyAsync(j => j.TimeId == timeId && j.AlunoId == request.AlunoId);
+
+                if (jaEstaNoTime)
+                    throw new ArgumentException("Aluno já está no time");
+
+                // Adicionar jogador ao time
+                var jogadorTime = new JogadorTime
+                {
+                    TimeId = timeId,
+                    AlunoId = request.AlunoId,
+                    DataEscalacao = DateTime.UtcNow
+                };
+
+                context.JogadoresTime.Add(jogadorTime);
+                await context.SaveChangesAsync();
+
+                _logger.LogInformation("Jogador {AlunoId} adicionado ao time {TimeId} pelo técnico {TecnicoId}", 
+                    request.AlunoId, timeId, tecnicoId);
+
+                // Retornar time atualizado
+                return await ObterTimePorIdAsync(context, timeId);
+            }
+            catch (ArgumentException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao adicionar jogador ao time");
+                throw new Exception("Erro ao adicionar jogador ao time. Tente novamente mais tarde.");
+            }
+        }
+
+        // Remover Jogador do Time
+        public async Task<RemoverJogadorResponseDTO> RemoverJogadorDoTimeAsync(int tecnicoId, int timeId, int jogadorId)
+        {
+            try
+            {
+                var tecnico = await _userRepository.GetByIdAsync(tecnicoId);
+                if (tecnico == null || tecnico.Role != UserRole.TecnicoFutebol)
+                    throw new ArgumentException("Técnico não encontrado ou sem permissão");
+
+                var context = GetContext();
+
+                // Validar se time existe e pertence ao técnico
+                var time = await context.Times
+                    .FirstOrDefaultAsync(t => t.Id == timeId && t.TecnicoId == tecnicoId && t.IsActive);
+
+                if (time == null)
+                    throw new ArgumentException("Time não encontrado");
+
+                // Validar se jogador existe no time
+                var jogadorTime = await context.JogadoresTime
+                    .FirstOrDefaultAsync(j => j.Id == jogadorId && j.TimeId == timeId);
+
+                if (jogadorTime == null)
+                    throw new ArgumentException("Jogador não encontrado no time");
+
+                // Remover jogador do time
+                context.JogadoresTime.Remove(jogadorTime);
+                await context.SaveChangesAsync();
+
+                _logger.LogInformation("Jogador {JogadorId} removido do time {TimeId} pelo técnico {TecnicoId}", 
+                    jogadorId, timeId, tecnicoId);
+
+                return new RemoverJogadorResponseDTO
+                {
+                    Message = "Jogador removido do time com sucesso"
+                };
+            }
+            catch (ArgumentException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao remover jogador do time");
+                throw new Exception("Erro ao remover jogador do time. Tente novamente mais tarde.");
+            }
+        }
+
+        // Deletar Time
+        public async Task<DeletarTimeResponseDTO> DeletarTimeAsync(int tecnicoId, int timeId)
+        {
+            try
+            {
+                var tecnico = await _userRepository.GetByIdAsync(tecnicoId);
+                if (tecnico == null || tecnico.Role != UserRole.TecnicoFutebol)
+                    throw new ArgumentException("Técnico não encontrado ou sem permissão");
+
+                var context = GetContext();
+
+                // Validar se time existe e pertence ao técnico
+                var time = await context.Times
+                    .Include(t => t.Jogadores)
+                    .FirstOrDefaultAsync(t => t.Id == timeId && t.TecnicoId == tecnicoId && t.IsActive);
+
+                if (time == null)
+                    throw new ArgumentException("Time não encontrado");
+
+                // Soft delete: marcar como inativo
+                time.IsActive = false;
+
+                // Opcional: remover jogadores do time (cascade delete já faz isso)
+                // Mas vamos manter os registros para histórico
+
+                await context.SaveChangesAsync();
+
+                _logger.LogInformation("Time {TimeId} excluído (soft delete) pelo técnico {TecnicoId}. Tinha {QuantidadeJogadores} jogadores", 
+                    timeId, tecnicoId, time.Jogadores.Count);
+
+                return new DeletarTimeResponseDTO
+                {
+                    Message = "Time excluído com sucesso",
+                    TimeId = timeId
+                };
+            }
+            catch (ArgumentException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao deletar time");
+                throw new Exception("Erro ao deletar time. Tente novamente mais tarde.");
+            }
+        }
+
+        // Método auxiliar para obter time por ID
+        private async Task<TimeDTO> ObterTimePorIdAsync(EduQuizContext context, int timeId)
+        {
+            var time = await context.Times
+                .Include(t => t.Jogadores)
+                .ThenInclude(j => j.Aluno)
+                .FirstOrDefaultAsync(t => t.Id == timeId && t.IsActive);
+
+            if (time == null)
+                throw new ArgumentException("Time não encontrado");
+
+            // Otimização: calcular scores de todos os alunos de uma vez
+            var todosAlunos = await context.Usuarios
+                .Where(u => u.Role == UserRole.Aluno && u.IsActive)
+                .ToListAsync();
+
+            var todasTentativas = await context.TentativasQuiz
+                .Where(t => t.Concluida)
+                .ToListAsync();
+
+            // Criar dicionário de scores por aluno
+            var scoresPorAluno = todasTentativas
+                .GroupBy(t => t.UsuarioId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Average(t => (t.Pontuacao ?? 0) / (t.PontuacaoMaxima ?? 1) * 100)
+                );
+
+            // Calcular posições no ranking
+            var alunosComScore = todosAlunos
+                .Select(u => new
+                {
+                    Id = u.Id,
+                    Score = scoresPorAluno.ContainsKey(u.Id) ? scoresPorAluno[u.Id] : 0
+                })
+                .OrderByDescending(a => a.Score)
+                .ToList();
+
+            var posicoesPorAluno = alunosComScore
+                .Select((a, index) => new { a.Id, Posicao = index + 1 })
+                .ToDictionary(a => a.Id, a => a.Posicao);
+
+            var jogadoresDTO = new List<JogadorTimeDTO>();
+
+            foreach (var jogador in time.Jogadores.OrderBy(j => j.DataEscalacao))
+            {
+                var aluno = jogador.Aluno;
+                var scoreGeral = scoresPorAluno.ContainsKey(aluno.Id) ? scoresPorAluno[aluno.Id] : 0;
+                var posicao = posicoesPorAluno.ContainsKey(aluno.Id) ? posicoesPorAluno[aluno.Id] : 0;
+
+                jogadoresDTO.Add(new JogadorTimeDTO
+                {
+                    Id = jogador.Id,
+                    AlunoId = aluno.Id,
+                    Nome = $"{aluno.FirstName} {aluno.LastName}".Trim(),
+                    Email = aluno.Email,
+                    Posicao = posicao,
+                    ScoreGeral = Math.Round(scoreGeral, 1)
+                });
+            }
+
+            return new TimeDTO
+            {
+                Id = time.Id,
+                Nome = time.Nome,
+                DataCriacao = time.DataCriacao,
+                Jogadores = jogadoresDTO
+            };
+        }
     }
 }

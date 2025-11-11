@@ -14,5 +14,12 @@ namespace eduQuizApis.Application.Interfaces
         Task<GerenciarProfessoresDTO> ObterProfessoresAsync(int tecnicoId, string? busca = null);
         Task<ProfessorDTO> AtualizarProfessorAsync(int tecnicoId, int professorId, AtualizarProfessorRequestDTO request);
         Task<ExcluirProfessorResponseDTO> ExcluirProfessorAsync(int tecnicoId, int professorId);
+        
+        // Gerenciar Times
+        Task<GerenciarTimesDTO> ObterTimesAsync(int tecnicoId);
+        Task<TimeDTO> CriarTimeAsync(int tecnicoId, CriarTimeRequestDTO request);
+        Task<TimeDTO> AdicionarJogadorAoTimeAsync(int tecnicoId, int timeId, AdicionarJogadorRequestDTO request);
+        Task<RemoverJogadorResponseDTO> RemoverJogadorDoTimeAsync(int tecnicoId, int timeId, int jogadorId);
+        Task<DeletarTimeResponseDTO> DeletarTimeAsync(int tecnicoId, int timeId);
     }
 }

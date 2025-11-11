@@ -810,6 +810,7 @@ namespace eduQuizApis.Application.Services
 
             // Calcular estatísticas atualizadas
             var tentativasConcluidas = await _context.TentativasQuiz
+                .Include(t => t.Quiz)
                 .Where(t => t.UsuarioId == usuarioId && t.Concluida && t.Quiz.CategoriaId == categoriaId)
                 .ToListAsync();
 
@@ -824,6 +825,9 @@ namespace eduQuizApis.Application.Services
 
             // Recalcular posições de todos os usuários nesta categoria
             await RecalcularPosicoesRankingAsync(categoriaId);
+            
+            // Salvar todas as mudanças do ranking
+            await _context.SaveChangesAsync();
         }
 
         private async Task RecalcularPosicoesRankingAsync(int categoriaId)

@@ -30,9 +30,13 @@ namespace eduQuizApis.Application.DTOs
     {
         public int Id { get; set; }
         public int Posicao { get; set; }
+        public string Username { get; set; } = string.Empty;
         public string Nome { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
+        public string? CPF { get; set; }
         public int Idade { get; set; }
+        public DateTime? DataNascimento { get; set; }
+        public string? AvatarUrl { get; set; }
         public int TotalQuizzes { get; set; }
         public decimal ScoreGeral { get; set; }
         public DateTime? UltimoQuiz { get; set; }
@@ -73,5 +77,66 @@ namespace eduQuizApis.Application.DTOs
         public string Nome { get; set; } = string.Empty;
         public string Sobrenome { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
+    }
+
+    // Atualizar Aluno
+    public class AtualizarAlunoRequestDTO
+    {
+        public string? Username { get; set; }
+        public string? Nome { get; set; }
+        public string? Email { get; set; }
+        public string? CPF { get; set; }
+        public int? Idade { get; set; }
+        public DateTime? DataNascimento { get; set; }
+        public string? AvatarUrl { get; set; }
+    }
+
+    // Excluir Aluno Response
+    public class ExcluirAlunoResponseDTO
+    {
+        public string Message { get; set; } = string.Empty;
+        public int AlunoId { get; set; }
+    }
+
+    // Gerenciar Professores
+    public class GerenciarProfessoresDTO
+    {
+        public List<ProfessorDTO> Professores { get; set; } = new List<ProfessorDTO>();
+        public int TotalProfessores { get; set; }
+    }
+
+    public class ProfessorDTO
+    {
+        public int Id { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public string Nome { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string? CPF { get; set; }
+        public DateTime? DataNascimento { get; set; }
+        public string? AvatarUrl { get; set; }
+        public string? Instituicao { get; set; }
+        public string? AreaEspecializacao { get; set; }
+        public int TotalQuizzes { get; set; }
+        public DateTime DataCadastro { get; set; }
+    }
+
+    // Atualizar Professor
+    public class AtualizarProfessorRequestDTO
+    {
+        public string? Username { get; set; }
+        public string? Nome { get; set; }
+        public string? Email { get; set; }
+        public string? CPF { get; set; }
+        public DateTime? DataNascimento { get; set; }
+        public string? AvatarUrl { get; set; }
+        public string? Instituicao { get; set; }
+        public string? AreaEspecializacao { get; set; }
+    }
+
+    // Excluir Professor Response
+    public class ExcluirProfessorResponseDTO
+    {
+        public string Message { get; set; } = string.Empty;
+        public int ProfessorId { get; set; }
     }
 }

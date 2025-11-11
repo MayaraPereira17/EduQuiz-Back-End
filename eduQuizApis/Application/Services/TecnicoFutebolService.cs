@@ -103,7 +103,8 @@ namespace eduQuizApis.Application.Services
                     query = query.Where(u => 
                         u.FirstName.Contains(busca) || 
                         u.LastName.Contains(busca) || 
-                        u.Email.Contains(busca));
+                        u.Email.Contains(busca) ||
+                        u.Username.Contains(busca));
                 }
 
                 // Simplificar consulta para evitar problemas com subconsultas
@@ -127,9 +128,13 @@ namespace eduQuizApis.Application.Services
                     alunos.Add(new AlunoRankingDTO
                     {
                         Id = usuario.Id,
+                        Username = usuario.Username,
                         Nome = $"{usuario.FirstName} {usuario.LastName}",
                         Email = usuario.Email,
+                        CPF = usuario.CPF,
                         Idade = CalcularIdade(usuario.DataNascimento),
+                        DataNascimento = usuario.DataNascimento,
+                        AvatarUrl = usuario.AvatarUrl,
                         TotalQuizzes = totalQuizzes,
                         ScoreGeral = Math.Round(scoreGeral, 1),
                         UltimoQuiz = ultimoQuiz
@@ -378,6 +383,505 @@ namespace eduQuizApis.Application.Services
             // Implementar lógica de sequência de dias consecutivos
             // Por enquanto, retornar valor aleatório para demonstração
             return new Random().Next(5, 20);
+        }
+
+        // Atualizar Aluno
+        public async Task<AlunoRankingDTO> AtualizarAlunoAsync(int tecnicoId, int alunoId, AtualizarAlunoRequestDTO request)
+        {
+            try
+            {
+                var tecnico = await _userRepository.GetByIdAsync(tecnicoId);
+                if (tecnico == null || tecnico.Role != UserRole.TecnicoFutebol)
+                    throw new ArgumentException("Técnico não encontrado ou sem permissão");
+
+                var context = GetContext();
+                var aluno = await context.Usuarios
+                    .FirstOrDefaultAsync(u => u.Id == alunoId && u.Role == UserRole.Aluno);
+
+                if (aluno == null)
+                    throw new ArgumentException("Aluno não encontrado");
+
+                // Validar e atualizar username
+                if (!string.IsNullOrWhiteSpace(request.Username))
+                {
+                    var username = request.Username.Trim();
+                    if (username.Length > 50)
+                    {
+                        throw new ArgumentException("Username deve ter no máximo 50 caracteres");
+                    }
+
+                    // Verificar se username já está em uso por outro usuário
+                    if (await _userRepository.UsernameExistsAsync(username, alunoId))
+                    {
+                        throw new ArgumentException("Username já está em uso por outro usuário");
+                    }
+
+                    aluno.Username = username;
+                }
+
+                // Validar e atualizar nome
+                if (!string.IsNullOrWhiteSpace(request.Nome))
+                {
+                    var partesNome = request.Nome.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    if (partesNome.Length > 0)
+                    {
+                        aluno.FirstName = partesNome[0];
+                        aluno.LastName = partesNome.Length > 1 
+                            ? string.Join(" ", partesNome.Skip(1)) 
+                            : string.Empty;
+                    }
+                    else
+                    {
+                        throw new ArgumentException("Nome não pode estar vazio");
+                    }
+                }
+
+                // Validar e atualizar email
+                if (!string.IsNullOrWhiteSpace(request.Email))
+                {
+                    // Validar formato de email
+                    if (!System.Text.RegularExpressions.Regex.IsMatch(request.Email, 
+                        @"^[^@\s]+@[^@\s]+\.[^@\s]+$", 
+                        System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                    {
+                        throw new ArgumentException("Email inválido");
+                    }
+
+                    if (request.Email.Length > 100)
+                    {
+                        throw new ArgumentException("Email deve ter no máximo 100 caracteres");
+                    }
+
+                    // Verificar se email já está em uso por outro usuário
+                    if (await _userRepository.EmailExistsAsync(request.Email, alunoId))
+                    {
+                        throw new ArgumentException("Email já está em uso por outro usuário");
+                    }
+
+                    aluno.Email = request.Email;
+                }
+
+                // Validar e atualizar CPF
+                if (request.CPF != null)
+                {
+                    var cpf = request.CPF.Trim();
+                    if (string.IsNullOrEmpty(cpf))
+                    {
+                        aluno.CPF = null; // Permite remover CPF
+                    }
+                    else
+                    {
+                        if (cpf.Length > 14)
+                        {
+                            throw new ArgumentException("CPF deve ter no máximo 14 caracteres");
+                        }
+                        aluno.CPF = cpf;
+                    }
+                }
+
+                // Validar e atualizar data de nascimento
+                if (request.DataNascimento.HasValue)
+                {
+                    aluno.DataNascimento = request.DataNascimento.Value;
+                }
+                else if (request.Idade.HasValue)
+                {
+                    // Compatibilidade: se idade for fornecida, converter para data de nascimento
+                    if (request.Idade.Value <= 0)
+                    {
+                        throw new ArgumentException("Idade deve ser um número positivo");
+                    }
+
+                    // Calcular data de nascimento aproximada (assumindo aniversário já ocorreu este ano)
+                    var dataNascimento = DateTime.UtcNow.AddYears(-request.Idade.Value);
+                    aluno.DataNascimento = dataNascimento;
+                }
+
+                // Validar e atualizar avatar URL
+                if (request.AvatarUrl != null)
+                {
+                    var avatarUrl = request.AvatarUrl.Trim();
+                    if (string.IsNullOrEmpty(avatarUrl))
+                    {
+                        aluno.AvatarUrl = null; // Permite remover avatar
+                    }
+                    else
+                    {
+                        if (avatarUrl.Length > 500)
+                        {
+                            throw new ArgumentException("Avatar URL deve ter no máximo 500 caracteres");
+                        }
+                        aluno.AvatarUrl = avatarUrl;
+                    }
+                }
+
+                aluno.UpdatedAt = DateTime.UtcNow;
+                await context.SaveChangesAsync();
+
+                // Buscar estatísticas atualizadas do aluno
+                var tentativas = await context.TentativasQuiz
+                    .Where(t => t.UsuarioId == alunoId && t.Concluida)
+                    .ToListAsync();
+
+                var totalQuizzes = tentativas.Count;
+                var scoreGeral = tentativas.Any() ? 
+                    tentativas.Average(t => (t.Pontuacao ?? 0) / (t.PontuacaoMaxima ?? 1) * 100) : 0;
+                
+                var ultimoQuiz = tentativas
+                    .OrderByDescending(t => t.DataConclusao)
+                    .FirstOrDefault()?.DataConclusao;
+
+                // Calcular posição no ranking
+                var todosAlunos = await context.Usuarios
+                    .Where(u => u.Role == UserRole.Aluno && u.IsActive)
+                    .ToListAsync();
+
+                var alunosComScore = new List<(int Id, decimal Score)>();
+                foreach (var u in todosAlunos)
+                {
+                    var tentativasAluno = await context.TentativasQuiz
+                        .Where(t => t.UsuarioId == u.Id && t.Concluida)
+                        .ToListAsync();
+                    
+                    var score = tentativasAluno.Any() ? 
+                        tentativasAluno.Average(t => (t.Pontuacao ?? 0) / (t.PontuacaoMaxima ?? 1) * 100) : 0;
+                    
+                    alunosComScore.Add((u.Id, score));
+                }
+
+                var posicao = alunosComScore
+                    .OrderByDescending(a => a.Score)
+                    .ToList()
+                    .FindIndex(a => a.Id == alunoId) + 1;
+
+                return new AlunoRankingDTO
+                {
+                    Id = aluno.Id,
+                    Posicao = posicao,
+                    Username = aluno.Username,
+                    Nome = $"{aluno.FirstName} {aluno.LastName}".Trim(),
+                    Email = aluno.Email,
+                    CPF = aluno.CPF,
+                    Idade = CalcularIdade(aluno.DataNascimento),
+                    DataNascimento = aluno.DataNascimento,
+                    AvatarUrl = aluno.AvatarUrl,
+                    TotalQuizzes = totalQuizzes,
+                    ScoreGeral = Math.Round(scoreGeral, 1),
+                    UltimoQuiz = ultimoQuiz
+                };
+            }
+            catch (ArgumentException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao atualizar aluno");
+                throw new Exception("Erro ao atualizar aluno. Tente novamente mais tarde.");
+            }
+        }
+
+        // Excluir Aluno (Soft Delete)
+        public async Task<ExcluirAlunoResponseDTO> ExcluirAlunoAsync(int tecnicoId, int alunoId)
+        {
+            try
+            {
+                var tecnico = await _userRepository.GetByIdAsync(tecnicoId);
+                if (tecnico == null || tecnico.Role != UserRole.TecnicoFutebol)
+                    throw new ArgumentException("Técnico não encontrado ou sem permissão");
+
+                var context = GetContext();
+                var aluno = await context.Usuarios
+                    .FirstOrDefaultAsync(u => u.Id == alunoId && u.Role == UserRole.Aluno);
+
+                if (aluno == null)
+                    throw new ArgumentException("Aluno não encontrado");
+
+                // Soft delete: marcar como inativo
+                aluno.IsActive = false;
+                aluno.UpdatedAt = DateTime.UtcNow;
+
+                await context.SaveChangesAsync();
+
+                _logger.LogInformation("Aluno {AlunoId} excluído (soft delete) pelo técnico {TecnicoId}", alunoId, tecnicoId);
+
+                return new ExcluirAlunoResponseDTO
+                {
+                    Message = "Aluno excluído com sucesso",
+                    AlunoId = alunoId
+                };
+            }
+            catch (ArgumentException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao excluir aluno");
+                throw new Exception("Erro ao excluir aluno. Tente novamente mais tarde.");
+            }
+        }
+
+        // Listar Professores
+        public async Task<GerenciarProfessoresDTO> ObterProfessoresAsync(int tecnicoId, string? busca = null)
+        {
+            try
+            {
+                var tecnico = await _userRepository.GetByIdAsync(tecnicoId);
+                if (tecnico == null || tecnico.Role != UserRole.TecnicoFutebol)
+                    throw new ArgumentException("Técnico não encontrado ou sem permissão");
+
+                var context = GetContext();
+                var query = context.Usuarios
+                    .Where(u => u.Role == UserRole.Professor && u.IsActive);
+
+                if (!string.IsNullOrEmpty(busca))
+                {
+                    query = query.Where(u => 
+                        u.FirstName.Contains(busca) || 
+                        u.LastName.Contains(busca) || 
+                        u.Email.Contains(busca) ||
+                        u.Username.Contains(busca));
+                }
+
+                var usuarios = await query.ToListAsync();
+                var professores = new List<ProfessorDTO>();
+
+                foreach (var usuario in usuarios)
+                {
+                    var totalQuizzes = await context.Quizzes
+                        .Where(q => q.CriadoPor == usuario.Id)
+                        .CountAsync();
+
+                    professores.Add(new ProfessorDTO
+                    {
+                        Id = usuario.Id,
+                        Username = usuario.Username,
+                        Nome = $"{usuario.FirstName} {usuario.LastName}".Trim(),
+                        Email = usuario.Email,
+                        CPF = usuario.CPF,
+                        DataNascimento = usuario.DataNascimento,
+                        AvatarUrl = usuario.AvatarUrl,
+                        Instituicao = null, // Campo não existe no banco
+                        AreaEspecializacao = null, // Campo não existe no banco
+                        TotalQuizzes = totalQuizzes,
+                        DataCadastro = usuario.CreatedAt
+                    });
+                }
+
+                return new GerenciarProfessoresDTO
+                {
+                    Professores = professores,
+                    TotalProfessores = professores.Count
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao obter lista de professores");
+                throw;
+            }
+        }
+
+        // Atualizar Professor
+        public async Task<ProfessorDTO> AtualizarProfessorAsync(int tecnicoId, int professorId, AtualizarProfessorRequestDTO request)
+        {
+            try
+            {
+                var tecnico = await _userRepository.GetByIdAsync(tecnicoId);
+                if (tecnico == null || tecnico.Role != UserRole.TecnicoFutebol)
+                    throw new ArgumentException("Técnico não encontrado ou sem permissão");
+
+                var context = GetContext();
+                var professor = await context.Usuarios
+                    .FirstOrDefaultAsync(u => u.Id == professorId && u.Role == UserRole.Professor);
+
+                if (professor == null)
+                    throw new ArgumentException("Professor não encontrado");
+
+                // Validar e atualizar username
+                if (!string.IsNullOrWhiteSpace(request.Username))
+                {
+                    var username = request.Username.Trim();
+                    if (username.Length > 50)
+                    {
+                        throw new ArgumentException("Username deve ter no máximo 50 caracteres");
+                    }
+
+                    // Verificar se username já está em uso por outro usuário
+                    if (await _userRepository.UsernameExistsAsync(username, professorId))
+                    {
+                        throw new ArgumentException("Username já está em uso por outro usuário");
+                    }
+
+                    professor.Username = username;
+                }
+
+                // Validar e atualizar nome
+                if (!string.IsNullOrWhiteSpace(request.Nome))
+                {
+                    var partesNome = request.Nome.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    if (partesNome.Length > 0)
+                    {
+                        professor.FirstName = partesNome[0];
+                        professor.LastName = partesNome.Length > 1 
+                            ? string.Join(" ", partesNome.Skip(1)) 
+                            : string.Empty;
+                    }
+                    else
+                    {
+                        throw new ArgumentException("Nome não pode estar vazio");
+                    }
+                }
+
+                // Validar e atualizar email
+                if (!string.IsNullOrWhiteSpace(request.Email))
+                {
+                    // Validar formato de email
+                    if (!System.Text.RegularExpressions.Regex.IsMatch(request.Email, 
+                        @"^[^@\s]+@[^@\s]+\.[^@\s]+$", 
+                        System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                    {
+                        throw new ArgumentException("Email inválido");
+                    }
+
+                    if (request.Email.Length > 100)
+                    {
+                        throw new ArgumentException("Email deve ter no máximo 100 caracteres");
+                    }
+
+                    // Verificar se email já está em uso por outro usuário
+                    if (await _userRepository.EmailExistsAsync(request.Email, professorId))
+                    {
+                        throw new ArgumentException("Email já está em uso por outro usuário");
+                    }
+
+                    professor.Email = request.Email;
+                }
+
+                // Validar e atualizar CPF
+                if (request.CPF != null)
+                {
+                    var cpf = request.CPF.Trim();
+                    if (string.IsNullOrEmpty(cpf))
+                    {
+                        professor.CPF = null; // Permite remover CPF
+                    }
+                    else
+                    {
+                        if (cpf.Length > 14)
+                        {
+                            throw new ArgumentException("CPF deve ter no máximo 14 caracteres");
+                        }
+                        professor.CPF = cpf;
+                    }
+                }
+
+                // Validar e atualizar data de nascimento
+                if (request.DataNascimento.HasValue)
+                {
+                    professor.DataNascimento = request.DataNascimento.Value;
+                }
+
+                // Validar e atualizar avatar URL
+                if (request.AvatarUrl != null)
+                {
+                    var avatarUrl = request.AvatarUrl.Trim();
+                    if (string.IsNullOrEmpty(avatarUrl))
+                    {
+                        professor.AvatarUrl = null; // Permite remover avatar
+                    }
+                    else
+                    {
+                        if (avatarUrl.Length > 500)
+                        {
+                            throw new ArgumentException("Avatar URL deve ter no máximo 500 caracteres");
+                        }
+                        professor.AvatarUrl = avatarUrl;
+                    }
+                }
+
+                // Nota: Instituicao e AreaEspecializacao não existem no banco de dados
+                // Esses campos são apenas retornados como null no response
+                // Se no futuro forem adicionados ao banco, devem ser atualizados aqui
+
+                professor.UpdatedAt = DateTime.UtcNow;
+                await context.SaveChangesAsync();
+
+                // Buscar estatísticas atualizadas do professor
+                var totalQuizzes = await context.Quizzes
+                    .Where(q => q.CriadoPor == professorId)
+                    .CountAsync();
+
+                return new ProfessorDTO
+                {
+                    Id = professor.Id,
+                    Username = professor.Username,
+                    Nome = $"{professor.FirstName} {professor.LastName}".Trim(),
+                    Email = professor.Email,
+                    CPF = professor.CPF,
+                    DataNascimento = professor.DataNascimento,
+                    AvatarUrl = professor.AvatarUrl,
+                    Instituicao = request.Instituicao, // Retorna o valor enviado, mas não salva no banco
+                    AreaEspecializacao = request.AreaEspecializacao, // Retorna o valor enviado, mas não salva no banco
+                    TotalQuizzes = totalQuizzes,
+                    DataCadastro = professor.CreatedAt
+                };
+            }
+            catch (ArgumentException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao atualizar professor");
+                throw new Exception("Erro ao atualizar professor. Tente novamente mais tarde.");
+            }
+        }
+
+        // Excluir Professor (Soft Delete)
+        public async Task<ExcluirProfessorResponseDTO> ExcluirProfessorAsync(int tecnicoId, int professorId)
+        {
+            try
+            {
+                var tecnico = await _userRepository.GetByIdAsync(tecnicoId);
+                if (tecnico == null || tecnico.Role != UserRole.TecnicoFutebol)
+                    throw new ArgumentException("Técnico não encontrado ou sem permissão");
+
+                var context = GetContext();
+                var professor = await context.Usuarios
+                    .FirstOrDefaultAsync(u => u.Id == professorId && u.Role == UserRole.Professor);
+
+                if (professor == null)
+                    throw new ArgumentException("Professor não encontrado");
+
+                // Verificar se professor tem quizzes criados (opcional - pode bloquear exclusão)
+                var temQuizzes = await context.Quizzes
+                    .AnyAsync(q => q.CriadoPor == professorId);
+
+                // Soft delete: marcar como inativo
+                professor.IsActive = false;
+                professor.UpdatedAt = DateTime.UtcNow;
+
+                await context.SaveChangesAsync();
+
+                _logger.LogInformation("Professor {ProfessorId} excluído (soft delete) pelo técnico {TecnicoId}. Tinha quizzes: {TemQuizzes}", 
+                    professorId, tecnicoId, temQuizzes);
+
+                return new ExcluirProfessorResponseDTO
+                {
+                    Message = "Professor excluído com sucesso",
+                    ProfessorId = professorId
+                };
+            }
+            catch (ArgumentException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao excluir professor");
+                throw new Exception("Erro ao excluir professor. Tente novamente mais tarde.");
+            }
         }
     }
 }

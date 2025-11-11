@@ -9,5 +9,10 @@ namespace eduQuizApis.Application.Interfaces
         Task<RelatorioDesempenhoDTO> ObterRelatorioDesempenhoAsync(int tecnicoId);
         Task<PerfilTecnicoDTO> ObterPerfilAsync(int tecnicoId);
         Task<PerfilTecnicoDTO> AtualizarPerfilAsync(int tecnicoId, AtualizarPerfilTecnicoRequestDTO request);
+        Task<AlunoRankingDTO> AtualizarAlunoAsync(int tecnicoId, int alunoId, AtualizarAlunoRequestDTO request);
+        Task<ExcluirAlunoResponseDTO> ExcluirAlunoAsync(int tecnicoId, int alunoId);
+        Task<GerenciarProfessoresDTO> ObterProfessoresAsync(int tecnicoId, string? busca = null);
+        Task<ProfessorDTO> AtualizarProfessorAsync(int tecnicoId, int professorId, AtualizarProfessorRequestDTO request);
+        Task<ExcluirProfessorResponseDTO> ExcluirProfessorAsync(int tecnicoId, int professorId);
     }
 }

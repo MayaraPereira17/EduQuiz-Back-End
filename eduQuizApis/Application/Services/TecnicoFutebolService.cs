@@ -7,6 +7,10 @@ using eduQuizApis.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
+using ClosedXML.Excel;
 
 namespace eduQuizApis.Application.Services
 {
@@ -1287,6 +1291,238 @@ namespace eduQuizApis.Application.Services
                 DataCriacao = time.DataCriacao,
                 Jogadores = jogadoresDTO
             };
+        }
+
+        // Exportar Relatório
+        public async Task<byte[]> ExportarRelatorioAsync(int tecnicoId, string formato, int? quantidade = null)
+        {
+            try
+            {
+                var tecnico = await _userRepository.GetByIdAsync(tecnicoId);
+                if (tecnico == null || tecnico.Role != UserRole.TecnicoFutebol)
+                    throw new ArgumentException("Técnico não encontrado ou sem permissão");
+
+                if (formato?.ToLower() != "pdf" && formato?.ToLower() != "excel")
+                    throw new ArgumentException("Formato inválido. Use 'pdf' ou 'excel'");
+
+                if (quantidade.HasValue && quantidade.Value <= 0)
+                    throw new ArgumentException("Quantidade deve ser um número positivo");
+
+                // Obter relatório de desempenho
+                var relatorio = await ObterRelatorioDesempenhoAsync(tecnicoId);
+
+                // Aplicar filtro de quantidade se fornecido
+                var alunosParaExportar = relatorio.Alunos;
+                if (quantidade.HasValue)
+                {
+                    alunosParaExportar = alunosParaExportar.Take(quantidade.Value).ToList();
+                }
+
+                // Gerar arquivo conforme formato
+                if (formato.ToLower() == "pdf")
+                {
+                    return GerarPdfRelatorio(alunosParaExportar, relatorio.MediaGeral, relatorio.TotalAlunos, quantidade);
+                }
+                else // excel
+                {
+                    return GerarExcelRelatorio(alunosParaExportar, relatorio.MediaGeral, relatorio.TotalAlunos, quantidade);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao exportar relatório");
+                throw;
+            }
+        }
+
+        private byte[] GerarPdfRelatorio(List<DesempenhoAlunoDTO> alunos, decimal mediaGeral, int totalAlunos, int? quantidade)
+        {
+            QuestPDF.Settings.License = LicenseType.Community;
+
+            var document = Document.Create(container =>
+            {
+                container.Page(page =>
+                {
+                    page.Size(PageSizes.A4);
+                    page.Margin(2, Unit.Centimetre);
+                    page.PageColor(Colors.White);
+                    page.DefaultTextStyle(x => x.FontSize(10));
+
+                    page.Header()
+                        .AlignCenter()
+                        .Text("Relatório de Desempenho dos Alunos")
+                        .SemiBold()
+                        .FontSize(16)
+                        .MarginBottom(1, Unit.Centimetre);
+
+                    page.Content()
+                        .PaddingVertical(1, Unit.Centimetre)
+                        .Column(column =>
+                        {
+                            column.Spacing(0.5f, Unit.Centimetre);
+
+                            // Informações gerais
+                            column.Item()
+                                .PaddingBottom(0.5f, Unit.Centimetre)
+                                .BorderBottom(1)
+                                .Column(infoColumn =>
+                                {
+                                    infoColumn.Item().Text($"Total de Alunos: {totalAlunos}");
+                                    infoColumn.Item().Text($"Média Geral: {mediaGeral:F2}%");
+                                    if (quantidade.HasValue)
+                                    {
+                                        infoColumn.Item().Text($"Top {quantidade.Value} alunos do ranking");
+                                    }
+                                    infoColumn.Item().Text($"Data de Geração: {DateTime.Now:dd/MM/yyyy HH:mm}");
+                                });
+
+                            // Tabela de alunos
+                            column.Item()
+                                .Table(table =>
+                                {
+                                    table.ColumnsDefinition(columns =>
+                                    {
+                                        columns.RelativeColumn(1); // Posição
+                                        columns.RelativeColumn(3); // Nome
+                                        columns.RelativeColumn(2); // Total Quizzes
+                                        columns.RelativeColumn(2); // Score Geral
+                                        columns.RelativeColumn(2); // Último Quiz
+                                    });
+
+                                    // Cabeçalho
+                                    table.Header(header =>
+                                    {
+                                        header.Cell().Element(CellStyle).Text("Posição").SemiBold();
+                                        header.Cell().Element(CellStyle).Text("Nome").SemiBold();
+                                        header.Cell().Element(CellStyle).AlignCenter().Text("Quizzes").SemiBold();
+                                        header.Cell().Element(CellStyle).AlignCenter().Text("Score (%)").SemiBold();
+                                        header.Cell().Element(CellStyle).AlignCenter().Text("Último Quiz").SemiBold();
+
+                                        static IContainer CellStyle(IContainer container)
+                                        {
+                                            return container
+                                                .BorderBottom(1)
+                                                .PaddingVertical(5)
+                                                .Background(Colors.Grey.Lighten3);
+                                        }
+                                    });
+
+                                    // Dados
+                                    int posicao = 1;
+                                    foreach (var aluno in alunos)
+                                    {
+                                        table.Cell().Element(CellStyle).AlignCenter().Text(posicao.ToString());
+                                        table.Cell().Element(CellStyle).Text(aluno.Nome);
+                                        table.Cell().Element(CellStyle).AlignCenter().Text(aluno.TotalQuizzes.ToString());
+                                        table.Cell().Element(CellStyle).AlignCenter().Text($"{aluno.ScoreGeral:F2}%");
+                                        table.Cell().Element(CellStyle).AlignCenter().Text(aluno.UltimoQuiz?.ToString("dd/MM/yyyy") ?? "N/A");
+
+                                        static IContainer CellStyle(IContainer container)
+                                        {
+                                            return container
+                                                .BorderBottom(0.5f)
+                                                .BorderColor(Colors.Grey.Lighten2)
+                                                .PaddingVertical(5);
+                                        }
+
+                                        posicao++;
+                                    }
+                                });
+                        });
+
+                    page.Footer()
+                        .AlignCenter()
+                        .Text(x =>
+                        {
+                            x.Span("Página ");
+                            x.CurrentPageNumber();
+                            x.Span(" de ");
+                            x.TotalPages();
+                        })
+                        .FontSize(8)
+                        .FontColor(Colors.Grey.Medium);
+                });
+            });
+
+            return document.GeneratePdf();
+        }
+
+        private byte[] GerarExcelRelatorio(List<DesempenhoAlunoDTO> alunos, decimal mediaGeral, int totalAlunos, int? quantidade)
+        {
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Relatório de Desempenho");
+
+            // Título
+            worksheet.Cell(1, 1).Value = "Relatório de Desempenho dos Alunos";
+            worksheet.Cell(1, 1).Style.Font.Bold = true;
+            worksheet.Cell(1, 1).Style.Font.FontSize = 16;
+            worksheet.Range(1, 1, 1, 5).Merge();
+
+            // Informações gerais
+            int row = 3;
+            worksheet.Cell(row, 1).Value = "Total de Alunos:";
+            worksheet.Cell(row, 2).Value = totalAlunos;
+            row++;
+            worksheet.Cell(row, 1).Value = "Média Geral:";
+            worksheet.Cell(row, 2).Value = $"{mediaGeral:F2}%";
+            row++;
+            if (quantidade.HasValue)
+            {
+                worksheet.Cell(row, 1).Value = $"Top {quantidade.Value} alunos do ranking";
+                worksheet.Range(row, 1, row, 2).Merge();
+                row++;
+            }
+            worksheet.Cell(row, 1).Value = "Data de Geração:";
+            worksheet.Cell(row, 2).Value = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
+            row += 2;
+
+            // Cabeçalho da tabela
+            worksheet.Cell(row, 1).Value = "Posição";
+            worksheet.Cell(row, 2).Value = "Nome";
+            worksheet.Cell(row, 3).Value = "Total Quizzes";
+            worksheet.Cell(row, 4).Value = "Score Geral (%)";
+            worksheet.Cell(row, 5).Value = "Último Quiz";
+
+            var headerRange = worksheet.Range(row, 1, row, 5);
+            headerRange.Style.Font.Bold = true;
+            headerRange.Style.Fill.BackgroundColor = XLColor.LightGray;
+            headerRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+
+            row++;
+
+            // Dados
+            int posicao = 1;
+            foreach (var aluno in alunos)
+            {
+                worksheet.Cell(row, 1).Value = posicao;
+                worksheet.Cell(row, 2).Value = aluno.Nome;
+                worksheet.Cell(row, 3).Value = aluno.TotalQuizzes;
+                worksheet.Cell(row, 4).Value = aluno.ScoreGeral;
+                worksheet.Cell(row, 5).Value = aluno.UltimoQuiz?.ToString("dd/MM/yyyy") ?? "N/A";
+
+                var dataRange = worksheet.Range(row, 1, row, 5);
+                dataRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+
+                // Formatação de número para score
+                worksheet.Cell(row, 4).Style.NumberFormat.Format = "0.00";
+
+                row++;
+                posicao++;
+            }
+
+            // Ajustar largura das colunas
+            worksheet.Column(1).Width = 10;
+            worksheet.Column(2).Width = 30;
+            worksheet.Column(3).Width = 15;
+            worksheet.Column(4).Width = 15;
+            worksheet.Column(5).Width = 15;
+
+            // Centralizar cabeçalho
+            worksheet.Range(1, 1, 1, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            return stream.ToArray();
         }
     }
 }

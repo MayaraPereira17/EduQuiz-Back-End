@@ -56,6 +56,9 @@ namespace eduQuizApis.Application.Services
             // Obter quizzes recentes
             var quizzesRecentes = await ObterQuizzesRecentesAsync(usuarioId);
 
+            // Obter times escalados do aluno
+            var timesEscalados = await ObterTimesEscaladosAsync(usuarioId);
+
             return new DashboardAlunoDTO
             {
                 QuizzesCompletos = quizzesCompletos,
@@ -64,7 +67,8 @@ namespace eduQuizApis.Application.Services
                 Sequencia = sequencia,
                 Pontos = pontos,
                 TotalUsuarios = totalUsuarios,
-                QuizzesRecentes = quizzesRecentes
+                QuizzesRecentes = quizzesRecentes,
+                TimesEscalados = timesEscalados
             };
         }
 
@@ -713,6 +717,22 @@ namespace eduQuizApis.Application.Services
                     Categoria = t.Quiz.Categoria.Nome,
                     PercentualAcerto = (t.Pontuacao ?? 0) / (t.PontuacaoMaxima ?? 1) * 100,
                     DataConclusao = t.DataConclusao ?? t.DataInicio
+                })
+                .ToListAsync();
+        }
+
+        private async Task<List<TimeEscalacaoDTO>> ObterTimesEscaladosAsync(int usuarioId)
+        {
+            return await _context.JogadoresTime
+                .Include(j => j.Time)
+                .Where(j => j.AlunoId == usuarioId && j.Time.IsActive)
+                .OrderByDescending(j => j.DataEscalacao)
+                .Select(j => new TimeEscalacaoDTO
+                {
+                    Id = j.Time.Id,
+                    Nome = j.Time.Nome,
+                    DataCriacao = j.Time.DataCriacao,
+                    DataEscalacao = j.DataEscalacao
                 })
                 .ToListAsync();
         }

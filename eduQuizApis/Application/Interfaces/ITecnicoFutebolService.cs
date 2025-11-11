@@ -21,5 +21,8 @@ namespace eduQuizApis.Application.Interfaces
         Task<TimeDTO> AdicionarJogadorAoTimeAsync(int tecnicoId, int timeId, AdicionarJogadorRequestDTO request);
         Task<RemoverJogadorResponseDTO> RemoverJogadorDoTimeAsync(int tecnicoId, int timeId, int jogadorId);
         Task<DeletarTimeResponseDTO> DeletarTimeAsync(int tecnicoId, int timeId);
+        
+        // Exportar Relatório
+        Task<byte[]> ExportarRelatorioAsync(int tecnicoId, string formato, int? quantidade = null);
     }
 }

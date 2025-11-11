@@ -99,6 +99,44 @@ namespace eduQuizApis.Presentation.Web.Controllers
         }
 
         /// <summary>
+        /// Exporta relatório de desempenho em PDF ou Excel
+        /// </summary>
+        /// <param name="formato">Formato do arquivo: "pdf" ou "excel"</param>
+        /// <param name="quantidade">Quantidade de alunos a incluir (opcional, top N do ranking)</param>
+        /// <returns>Arquivo PDF ou Excel</returns>
+        [HttpGet("relatorio-desempenho/exportar")]
+        public async Task<IActionResult> ExportarRelatorio([FromQuery] string formato, [FromQuery] int? quantidade = null)
+        {
+            try
+            {
+                var tecnicoId = ObterUsuarioId();
+                var arquivo = await _tecnicoService.ExportarRelatorioAsync(tecnicoId, formato, quantidade);
+
+                if (formato?.ToLower() == "pdf")
+                {
+                    return File(arquivo, "application/pdf", $"relatorio-desempenho-{DateTime.Now:yyyyMMddHHmmss}.pdf");
+                }
+                else if (formato?.ToLower() == "excel")
+                {
+                    return File(arquivo, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
+                        $"relatorio-desempenho-{DateTime.Now:yyyyMMddHHmmss}.xlsx");
+                }
+                else
+                {
+                    return BadRequest("Formato inválido. Use 'pdf' ou 'excel'");
+                }
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Erro interno do servidor");
+            }
+        }
+
+        /// <summary>
         /// Obtém o perfil do técnico
         /// </summary>
         /// <returns>Dados do perfil do técnico</returns>

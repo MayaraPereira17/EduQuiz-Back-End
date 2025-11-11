@@ -12,6 +12,15 @@ namespace eduQuizApis.Application.DTOs
         public int Pontos { get; set; }
         public int TotalUsuarios { get; set; }
         public List<QuizRecenteDTO> QuizzesRecentes { get; set; } = new List<QuizRecenteDTO>();
+        public List<TimeEscalacaoDTO> TimesEscalados { get; set; } = new List<TimeEscalacaoDTO>();
+    }
+
+    public class TimeEscalacaoDTO
+    {
+        public int Id { get; set; }
+        public string Nome { get; set; } = string.Empty;
+        public DateTime DataCriacao { get; set; }
+        public DateTime DataEscalacao { get; set; }
     }
 
     public class QuizRecenteDTO

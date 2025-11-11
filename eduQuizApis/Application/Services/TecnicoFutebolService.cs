@@ -1350,10 +1350,10 @@ namespace eduQuizApis.Application.Services
 
                     page.Header()
                         .AlignCenter()
+                        .PaddingBottom(1, Unit.Centimetre)
                         .Text("Relatório de Desempenho dos Alunos")
                         .SemiBold()
-                        .FontSize(16)
-                        .MarginBottom(1, Unit.Centimetre);
+                        .FontSize(16);
 
                     page.Content()
                         .PaddingVertical(1, Unit.Centimetre)
@@ -1432,15 +1432,14 @@ namespace eduQuizApis.Application.Services
 
                     page.Footer()
                         .AlignCenter()
+                        .DefaultTextStyle(x => x.FontSize(8).FontColor(Colors.Grey.Medium))
                         .Text(x =>
                         {
                             x.Span("Página ");
                             x.CurrentPageNumber();
                             x.Span(" de ");
                             x.TotalPages();
-                        })
-                        .FontSize(8)
-                        .FontColor(Colors.Grey.Medium);
+                        });
                 });
             });
 

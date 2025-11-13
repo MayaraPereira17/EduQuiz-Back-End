@@ -766,11 +766,20 @@ namespace eduQuizApis.Application.Services
 
         private async Task<ResultadoQuizDTO> FinalizarQuizInternoAsync(TentativasQuiz tentativa)
         {
+            // Garantir que PontuacaoMaxima está definida
+            if (tentativa.PontuacaoMaxima == null || tentativa.PontuacaoMaxima == 0)
+            {
+                tentativa.PontuacaoMaxima = tentativa.Quiz.Questoes.Count;
+            }
+
             tentativa.Concluida = true;
             tentativa.DataConclusao = DateTime.UtcNow;
             tentativa.TempoGasto = (int)(DateTime.UtcNow - tentativa.DataInicio).TotalSeconds;
 
             _context.TentativasQuiz.Update(tentativa);
+
+            // Salvar a tentativa primeiro para garantir que está marcada como concluída
+            await _context.SaveChangesAsync();
 
             // Criar relatório de performance
             var respostas = await _context.Respostas
@@ -785,16 +794,18 @@ namespace eduQuizApis.Application.Services
                 TotalQuestoes = tentativa.Quiz.Questoes.Count,
                 RespostasCorretas = respostas.Count(r => r.Correta == true),
                 RespostasErradas = respostas.Count(r => r.Correta == false),
-                Percentual = (decimal)respostas.Count(r => r.Correta == true) / tentativa.Quiz.Questoes.Count * 100,
+                Percentual = tentativa.Quiz.Questoes.Count > 0 ? 
+                    (decimal)respostas.Count(r => r.Correta == true) / tentativa.Quiz.Questoes.Count * 100 : 0,
                 TempoGasto = tentativa.TempoGasto ?? 0,
                 DataCriacao = DateTime.UtcNow
             };
 
             _context.RelatoriosPerformance.Add(relatorio);
 
-            // Atualizar ranking
+            // Atualizar ranking APÓS salvar a tentativa como concluída
             await AtualizarRankingAsync(tentativa.UsuarioId, tentativa.Quiz.CategoriaId);
 
+            // Salvar o relatório e qualquer mudança do ranking
             await _context.SaveChangesAsync();
 
             return new ResultadoQuizDTO
